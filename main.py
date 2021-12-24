@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 ENVTYPE = os.getenv('ENV_TYPE')
-LOGLEVEL = os.getenv("LOG_LEVEL")
+LOGLEVEL = os.getenv("LOG_LEVEL", logging.WARNING)
 
 if not os.path.exists('logs'):
     os.makedirs('logs')
