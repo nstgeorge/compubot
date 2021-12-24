@@ -21,7 +21,7 @@ class Quote(Scale):
 
     @quote_cmd.error
     async def command_error(self, e, *args, **kwargs):
-        print(f"Command hit error with {args=}, {kwargs=}")
+        print("Quote command error: {}".format(e))
 
 
 def setup(bot):
