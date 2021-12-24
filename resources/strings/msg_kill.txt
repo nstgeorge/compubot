@@ -14,4 +14,4 @@ I would tell you to say goodbye to your family, {name}, if you had one.
 {caller_name} gives {name} a solid punch.
 BY THE POWER OF {caller_name}, I CAST THEE {name} INTO THE UNDERWORLD.
 {name} spanked {caller_name} real good.
-{name} reduced {caller_name} to a {verb_scared} blob.
+{name} reduced {caller_name} to a {adj_scared} blob.
