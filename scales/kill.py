@@ -13,7 +13,7 @@ class Kill(Scale):
     def __init__(self, client: Snake):
         self.client = client
 
-    @slash_command(name="kill", description="ruthlessly murder your friends", scopes=[367865912952619018])
+    @slash_command(name="kill", description="ruthlessly murder your friends")
     @slash_option(
         name="user",
         description="tag who you want dead",
@@ -26,7 +26,6 @@ class Kill(Scale):
                 KILL_PHRASES_VS_ADMIN.replace("{name}", user).replace("{caller_name}", ctx.author.id)
             ))
         await ctx.send(random.choice(KILL_PHRASES.replace("{name}", user).replace("{caller_name}", ctx.author.id)))
-
 
 def setup(bot):
     Kill(bot)

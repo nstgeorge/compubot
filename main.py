@@ -1,5 +1,5 @@
 import os
-import json
+import requests
 
 from dis_snek.client import Snake
 from dis_snek.models.enums import Intents
@@ -14,7 +14,7 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 ENVTYPE = os.getenv('ENV_TYPE')
 
-client = Snake(intents=Intents.DEFAULT, sync_interactions=True)
+client = Snake(intents=Intents.DEFAULT, sync_interactions=True, debug_scope=367865912952619018)
 
 
 @listen()
