@@ -1,5 +1,4 @@
 import os
-import requests
 
 from dis_snek.client import Snake
 from dis_snek.models.enums import Intents
