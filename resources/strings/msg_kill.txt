@@ -1,0 +1,16 @@
+# Kill a user
+# {name} -> the user marked for death
+# {caller_name} -> the killer
+
+{name} is dead.
+DIE {name}.
+{name} has been cast into the deep.
+{name} is beaten to a bloody pulp by compubot.
+{name} shids and fards to death lol guys i'm so funny and quirky
+You may be still breathing now, {name}, but your days are numbered.
+{caller_name} stabs {name} with a railroad spike. Are you happy?
+{caller_name} casts POWER WORD KILL on {name}!
+I would tell you to say goodbye to your family, {name}, if you had one.
+{caller_name} gives {name} a solid punch.
+BY THE POWER OF {caller_name}, I CAST THEE {name} INTO THE UNDERWORLD.
+{name} spanked {caller_name} real good.

@@ -5,8 +5,8 @@ import logging
 from dis_snek import InteractionContext, OptionTypes, Snake, slash_command, slash_option, MentionTypes
 from dis_snek.models.scale import Scale
 
-KILL_PHRASES = json.load(open("resources/kill_strings.json"))
-KILL_PHRASES_VS_ADMIN = json.load(open("resources/kill_strings_against_admin.json"))
+import want_words as ww
+
 SETTINGS = json.load(open("resources/settings.json"))
 LOGGER = logging.getLogger()
 
@@ -24,16 +24,14 @@ class Kill(Scale):
         opt_type=OptionTypes.MENTIONABLE
     )
     async def kill(self, ctx: InteractionContext, user: MentionTypes.USERS):
+        scope = {
+            "name": f"<@{user.id}>",
+            "caller_name": f"@<{ctx.author.id}>",
+        }
         if user.id in SETTINGS["global"]["admin_ids"]:
-            await ctx.send(
-                random.choice(KILL_PHRASES_VS_ADMIN)
-                    .replace("{name}", "<@{}>".format(user.id))
-                    .replace("{caller_name}", "<@{}>".format(ctx.author.id))
-            )
+            await ctx.send(ww.resolve("{msg_kill_admin}", scope, scope_prefix=''))
         else:
-            await ctx.send(random.choice(KILL_PHRASES)
-                           .replace("{name}", "<@{}>".format(user.id))
-                           .replace("{caller_name}", "<@{}>".format(ctx.author.id)))
+            await ctx.send(ww.resolve("{msg_kill}", scope, scope_prefix=''))
         LOGGER.debug("kill: {} killed {}".format(ctx.author.id, user.id))
 
 
