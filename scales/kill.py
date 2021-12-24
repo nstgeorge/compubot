@@ -29,9 +29,9 @@ class Kill(Scale):
             "caller_name": f"@<{ctx.author.id}>",
         }
         if user.id in SETTINGS["global"]["admin_ids"]:
-            await ctx.send(ww.resolve("{msg_kill_admin}", scope, scope_prefix=''))
+            await ctx.send(ww.resolve("{msg_kill_admin}", scope))
         else:
-            await ctx.send(ww.resolve("{msg_kill}", scope, scope_prefix=''))
+            await ctx.send(ww.resolve("{msg_kill}", scope))
         LOGGER.debug("kill: {} killed {}".format(ctx.author.id, user.id))
 
 

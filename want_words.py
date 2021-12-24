@@ -41,5 +41,5 @@ if __name__ == '__main__':
             print(f'  {option}')
         print()
 
-    print(resolve('{msg_kill}', dict(name='USER', caller_name='CALLER'), scope_prefix=''))
-    print(resolve('{msg_kill_admin}', dict(name='ADMIN', caller_name='CALLER'), scope_prefix=''))
+    print(resolve('{msg_kill}', dict(name='USER', caller_name='CALLER')))
+    print(resolve('{msg_kill_admin}', dict(name='ADMIN', caller_name='CALLER')))
