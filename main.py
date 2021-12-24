@@ -21,5 +21,6 @@ client = Snake(intents=Intents.DEFAULT)
 async def on_ready():
     print("Connected to Discord! Running in {} mode.".format(ENVTYPE))
 
-client.grow_scale("quote")
+client.grow_scale("scales.quote")
+client.grow_scale("scales.kill")
 client.start(TOKEN)
