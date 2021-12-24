@@ -9,7 +9,7 @@ class Quote(Scale):
         self.client = client
 
     def __message_string(self, message: Message):
-        return "> {}\n - <@{}>, {}".format(message.content, message.author_id, message.timestamp)
+        return "> {}\n - <@{}>, {}".format(message.content, message.author.id, message.timestamp)
 
     @context_menu(name="Quote", context_type=CommandTypes.MESSAGE)
     async def quote_cmd(self, ctx: InteractionContext):
