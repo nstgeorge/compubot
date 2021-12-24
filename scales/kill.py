@@ -31,9 +31,10 @@ class Kill(Scale):
                     .replace("{name}", "<@{}>".format(user.id))
                     .replace("{caller_name}", "<@{}>".format(ctx.author.id))
             )
-        await ctx.send(random.choice(KILL_PHRASES)
-                       .replace("{name}", "<@{}>".format(user.id))
-                       .replace("{caller_name}", "<@{}>".format(user.id)))
+        else:
+            await ctx.send(random.choice(KILL_PHRASES)
+                           .replace("{name}", "<@{}>".format(user.id))
+                           .replace("{caller_name}", "<@{}>".format(user.id)))
         LOGGER.debug("kill: {} killed {}".format(ctx.author.id, user.id))
 
 
