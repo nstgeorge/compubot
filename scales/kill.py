@@ -13,7 +13,7 @@ class Kill(Scale):
     def __init__(self, client: Snake):
         self.client = client
 
-    @slash_command(name="kill", description="ruthlessly murder your friends")
+    @slash_command(name="kill", description="ruthlessly murder your friends", scopes=[367865912952619018])
     @slash_option(
         name="user",
         description="tag who you want dead",
@@ -21,7 +21,7 @@ class Kill(Scale):
         opt_type=OptionTypes.MENTIONABLE
     )
     async def kill(ctx: InteractionContext, user: MentionTypes.USERS):
-        if user.id in SETTINGS["global:admin_ids"]:
+        if user.id in SETTINGS["global"]["admin_ids"]:
             await ctx.send(random.choice(
                 KILL_PHRASES_VS_ADMIN.replace("{name}", user).replace("{caller_name}", ctx.author.id)
             ))

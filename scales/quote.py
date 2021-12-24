@@ -13,11 +13,11 @@ class Quote(Scale):
 
     @context_menu(name="Quote", context_type=CommandTypes.MESSAGE)
     async def quote_cmd(self, ctx: InteractionContext):
-        channel = await ctx.guild.get_channel(SETTINGS["quote:output_channel_id"])
+        channel = await ctx.guild.get_channel(SETTINGS["quote"]["output_channel_id"])
         message = await ctx.channel.get_message(ctx.target_id)
         await channel.send(self.__message_string(message))
 
-        await ctx.send(content="Pinny pin pinned.")
+        await ctx.send(SETTINGS["quote"]["success_message"])
 
     @quote_cmd.error
     async def command_error(self, e, *args, **kwargs):

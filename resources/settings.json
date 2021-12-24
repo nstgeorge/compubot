@@ -1,6 +1,11 @@
 {
-  "global:admin_ids": [
-    186691115720769536
-  ],
-  "quote:output_channel_id": 923645119637385246
+  "global": {
+    "admin_ids": [
+      186691115720769536
+    ]
+  },
+  "quote": {
+    "output_channel_id": 923645119637385246,
+    "success_message":  "Pinny pin pinned."
+  }
 }
