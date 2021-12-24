@@ -23,8 +23,7 @@ class Kill(Scale):
         required=True,
         opt_type=OptionTypes.MENTIONABLE
     )
-    async def kill(self, ctx: InteractionContext):
-        user = ctx.args[0]
+    async def kill(self, ctx: InteractionContext, user: MentionTypes.USERS):
         if user.id in SETTINGS["global"]["admin_ids"]:
             await ctx.send(
                 random.choice(KILL_PHRASES_VS_ADMIN)
@@ -34,7 +33,7 @@ class Kill(Scale):
         else:
             await ctx.send(random.choice(KILL_PHRASES)
                            .replace("{name}", "<@{}>".format(user.id))
-                           .replace("{caller_name}", "<@{}>".format(user.id)))
+                           .replace("{caller_name}", "<@{}>".format(ctx.author.id)))
         LOGGER.debug("kill: {} killed {}".format(ctx.author.id, user.id))
 
 
