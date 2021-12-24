@@ -14,12 +14,11 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 ENVTYPE = os.getenv('ENV_TYPE')
 
-client = Snake(intents=Intents.DEFAULT)
+client = Snake(intents=Intents.DEFAULT, sync_interactions=True)
 
 
 @listen()
 async def on_ready():
-    await client.synchronise_interactions()
     print("Connected to Discord! Running in {} mode.".format(ENVTYPE))
 
 client.grow_scale("scales.quote")
