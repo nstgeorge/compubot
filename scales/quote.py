@@ -1,8 +1,10 @@
-from dis_snek import context_menu, CommandTypes, InteractionContext, Snake, Message, GuildText
-from dis_snek.models.scale import Scale
 import json
 
+from dis_snek import context_menu, CommandTypes, InteractionContext, Snake, Message, GuildText
+from dis_snek.models.scale import Scale
+
 SETTINGS = json.load(open("resources/settings.json"))
+
 
 class Quote(Scale):
     def __init__(self, client: Snake):
