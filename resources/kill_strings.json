@@ -8,5 +8,6 @@
   "{caller_name} stabs {name} with a railroad spike. Are you happy?",
   "{caller_name} casts POWER WORD KILL on {name}!",
   "I would tell you to say goodbye to your family, {name}, if you had one.",
-  ""
+  "{caller_name} gives {name} a solid punch.",
+  "BY THE POWER OF {caller_name}, I CAST THEE {name} INTO THE UNDERWORLD."
 ]
