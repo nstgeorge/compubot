@@ -13,8 +13,6 @@ load_dotenv()
 ENVTYPE = os.getenv('ENV_TYPE')
 SETTINGS = json.load(open("resources/settings.json"))
 LOGGER = logging.getLogger()
-OUTPUT_CHANNEL = SETTINGS["quote"]["dev_output_channel_id"] if ENVTYPE == "dev" \
-    else SETTINGS["quote"]["output_channel_id"]
 
 
 class Quote(Scale):
@@ -22,17 +20,23 @@ class Quote(Scale):
         LOGGER.debug("Initialized /quote shard")
         self.client = client
 
+    def __get_output_channel(self, ctx: InteractionContext):
+        if ENVTYPE == "dev" and ctx.author.id in SETTINGS["global"]["admin_ids"]:
+            return SETTINGS["quote"]["dev_output_channel_id"]
+        else:
+            return SETTINGS["quote"]["output_channel_id"]
+
     def __message_string(self, message: Message):
         if message.content == "":
             return " - <@{}>, {}".format(message.author.id, message.timestamp)
 
         return "> {}\n - <@{}>, {}".format(message.content.replace("\n", "\n> "),
-                                              message.author.id,
-                                              message.timestamp)
+                                           message.author.id,
+                                           message.timestamp)
 
     @context_menu(name="Quote", context_type=CommandTypes.MESSAGE)
     async def quote_cmd(self, ctx: InteractionContext):
-        channel = await ctx.guild.get_channel(OUTPUT_CHANNEL)
+        channel = await ctx.guild.get_channel(self.__get_output_channel(ctx))
         message = await ctx.channel.get_message(ctx.target_id)
         for attach in message.attachments:
             await channel.send(attach.url)
