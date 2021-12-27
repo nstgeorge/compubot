@@ -21,8 +21,8 @@ class When(Scale):
         opt_type=OptionTypes.MENTIONABLE
     )
     async def when(self, ctx: InteractionContext, user: MentionTypes.USERS):
-        if user.id in USER_PHRASES:
-            await ctx.send("<@{}> will be on {}".format(user.id, USER_PHRASES[user.id]))
+        if str(user.id) in USER_PHRASES.keys():
+            await ctx.send("<@{}> will be on {}".format(user.id, USER_PHRASES[str(user.id)]))
         else:
             await ctx.send("I don't know.")
 

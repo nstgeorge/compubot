@@ -27,12 +27,13 @@ logging.getLogger().addHandler(stdoutHandler)
 COMMAND_POST_URL = "https://discord.com/api/v8/applications/923647717375344660/commands"
 COMMAND_POST_GUILD_URL = "https://discord.com/api/v8/applications/923647717375344660/guilds/367865912952619018/commands"
 
-client = Snake(intents=Intents.DEFAULT, sync_interactions=True, debug_scope=367865912952619018)
+client = Snake(intents=Intents.DEFAULT, sync_interactions=True)
 
 
 @listen()
 async def on_ready():
     print("Connected to Discord! Running in {} mode.".format(ENVTYPE))
+    print(client.application_commands)
 
 client.grow_scale("scales.quote")
 client.grow_scale("scales.kill")
