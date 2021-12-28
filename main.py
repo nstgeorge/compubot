@@ -38,4 +38,5 @@ async def on_ready():
 client.grow_scale("scales.quote")
 client.grow_scale("scales.kill")
 client.grow_scale("scales.when")
+client.grow_scale("scales.ip")
 client.start(TOKEN)
