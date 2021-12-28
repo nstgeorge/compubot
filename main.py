@@ -33,7 +33,6 @@ client = Snake(intents=Intents.DEFAULT, sync_interactions=True)
 @listen()
 async def on_ready():
     print("Connected to Discord! Running in {} mode.".format(ENVTYPE))
-    print(client.application_commands)
 
 client.grow_scale("scales.quote")
 client.grow_scale("scales.kill")
