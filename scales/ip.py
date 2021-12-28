@@ -27,6 +27,10 @@ class IP(Scale):
                                     r.randrange(100, 999, 1),
                                     r.randrange(100, 999, 1))
 
+    def __gen_google_maps_url(self, user: MentionTypes.USERS):
+        r = random.Random(user.id)
+        return "https://www.google.com/maps/@{},{},12z".format(r.uniform(-90, 90), r.uniform(-180, 180))
+
     @slash_command(name="ip", description="really truly hack a person")
     @slash_option(
         name="user",
@@ -45,7 +49,8 @@ class IP(Scale):
                 await msg.edit(self.__message_text(spinner, text))
                 time.sleep(0.7)
 
-        await msg.edit("Hack complete. <@{}>'s IP: {}".format(user.id, self.__gen_user_ip(user)))
+        await msg.edit("Hack complete. \n<@{}>'s IP: {} \nLocation: {}".format(
+            user.id, self.__gen_user_ip(user), self.__gen_google_maps_url(user)))
 
 
 def setup(bot):
