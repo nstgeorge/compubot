@@ -22,14 +22,14 @@ class IP(Scale):
 
     def __gen_user_ip(self, user: MentionTypes.USERS):
         r = random.Random(user.id)
-        return "{}.{}.{}.{}".format(r.randrange(10, 99, 1),
-                                    r.randrange(10, 99, 1),
-                                    r.randrange(100, 999, 1),
-                                    r.randrange(100, 999, 1))
+        return "{}.{}.{}.{}".format(r.randrange(1, 255, 1),
+                                    r.randrange(1, 255, 1),
+                                    r.randrange(1, 255, 1),
+                                    r.randrange(1, 255, 1))
 
     def __gen_google_maps_url(self, user: MentionTypes.USERS):
-        r = random.Random(user.id)
-        return "https://www.google.com/maps/@{},{},12z".format(r.uniform(-90, 90), r.uniform(-180, 180))
+        # r = random.Random(user.id)
+        return "https://www.google.com/maps/@{},{},12z".format(random.uniform(-90, 90), random.uniform(-180, 180))
 
     @slash_command(name="ip", description="really truly hack a person")
     @slash_option(
