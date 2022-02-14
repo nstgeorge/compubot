@@ -3,6 +3,7 @@ import os
 import sys
 import time
 
+import dis_snek
 from dis_snek import Intents, Snake, listen
 from dotenv import load_dotenv
 
@@ -31,10 +32,13 @@ client = Snake(intents=Intents.DEFAULT, sync_interactions=True)
 @listen()
 async def on_ready():
     print("Connected to Discord! Running in {} mode.".format(ENVTYPE))
+    print("Dis-Snek version: {}".format(dis_snek.__version__))
 
 client.grow_scale("scales.quote")
 client.grow_scale("scales.kill")
 client.grow_scale("scales.when")
 client.grow_scale("scales.ip")
 client.grow_scale("scales.mock")
+# client.grow_scale(debug_scale)
+
 client.start(TOKEN)
