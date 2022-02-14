@@ -1,8 +1,8 @@
 import json
 import logging
 
-from dis_snek import InteractionContext, OptionTypes, Snake, slash_command, slash_option, MentionTypes
-from dis_snek.models.scale import Scale
+from dis_snek import (InteractionContext, MentionTypes, OptionTypes, Scale,
+                      Snake, slash_command, slash_option)
 
 USER_PHRASES = json.load(open("resources/when_users.json"))
 LOGGER = logging.getLogger()

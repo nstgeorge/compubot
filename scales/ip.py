@@ -1,21 +1,23 @@
-import logging
 import itertools
-import random
 import json
+import logging
+import random
 import time
 
-from dis_snek import InteractionContext, OptionTypes, Snake, slash_command, slash_option, MentionTypes
-from dis_snek.models.scale import Scale
+from dis_snek import (InteractionContext, MentionTypes, OptionTypes, Scale,
+                      Snake, slash_command, slash_option)
 
 LOGGER = logging.getLogger()
 IP_PHRASES = json.load(open("resources/ip_strings.json"))
 SETTINGS = json.load(open("resources/settings.json"))
 
+
 class IP(Scale):
     def __init__(self, client: Snake):
         LOGGER.debug("Initialized /ip shard")
         self.client = client
-        self.__spinner = itertools.cycle(["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"])
+        self.__spinner = itertools.cycle(
+            ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"])
 
     def __message_text(self, spinner, message):
         return "{} {}".format(spinner, message)
@@ -39,7 +41,8 @@ class IP(Scale):
         opt_type=OptionTypes.MENTIONABLE
     )
     async def ip(self, ctx: InteractionContext, user: MentionTypes.USERS):
-        texts = random.sample(IP_PHRASES, SETTINGS["ip"]["messages_per_request"])
+        texts = random.sample(
+            IP_PHRASES, SETTINGS["ip"]["messages_per_request"])
         msg = await ctx.send("Beginning hack...")
         time.sleep(1)
 

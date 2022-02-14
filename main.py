@@ -1,12 +1,9 @@
+import logging
 import os
 import sys
-import logging
 import time
 
-from dis_snek.client import Snake
-from dis_snek.models.enums import Intents
-from dis_snek.models.listener import listen
-
+from dis_snek import Intents, Snake, listen
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -18,7 +15,8 @@ if not os.path.exists('logs'):
     os.makedirs('logs')
 
 level = getattr(logging, LOGLEVEL.upper(), logging.WARNING)
-logging.basicConfig(filename='logs/compubot_{}.log'.format(time.time_ns()), filemode='w', level=level)
+logging.basicConfig(
+    filename='logs/compubot_{}.log'.format(time.time_ns()), filemode='w', level=level)
 
 stdoutHandler = logging.StreamHandler(sys.stdout)
 stdoutHandler.setFormatter(logging.Formatter(logging.BASIC_FORMAT))
@@ -38,4 +36,5 @@ client.grow_scale("scales.quote")
 client.grow_scale("scales.kill")
 client.grow_scale("scales.when")
 client.grow_scale("scales.ip")
+client.grow_scale("scales.mock")
 client.start(TOKEN)

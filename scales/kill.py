@@ -1,12 +1,13 @@
 import json
-import random
 import logging
+import random
 
-from dis_snek import InteractionContext, OptionTypes, Snake, slash_command, slash_option, MentionTypes
-from dis_snek.models.scale import Scale
+from dis_snek import (InteractionContext, MentionTypes, OptionTypes, Scale,
+                      Snake, slash_command, slash_option)
 
 KILL_PHRASES = json.load(open("resources/kill_strings.json"))
-KILL_PHRASES_VS_ADMIN = json.load(open("resources/kill_strings_against_admin.json"))
+KILL_PHRASES_VS_ADMIN = json.load(
+    open("resources/kill_strings_against_admin.json"))
 SETTINGS = json.load(open("resources/settings.json"))
 LOGGER = logging.getLogger()
 
@@ -27,8 +28,8 @@ class Kill(Scale):
         if user.id in SETTINGS["global"]["admin_ids"]:
             await ctx.send(
                 random.choice(KILL_PHRASES_VS_ADMIN)
-                    .replace("{name}", "<@{}>".format(user.id))
-                    .replace("{caller_name}", "<@{}>".format(ctx.author.id))
+                .replace("{name}", "<@{}>".format(user.id))
+                .replace("{caller_name}", "<@{}>".format(ctx.author.id))
             )
         else:
             await ctx.send(random.choice(KILL_PHRASES)

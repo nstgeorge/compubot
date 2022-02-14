@@ -1,11 +1,10 @@
 import json
 import logging
 import os
-
-from dis_snek import context_menu, CommandTypes, InteractionContext, Snake, Message, GuildText
-from dis_snek.models.scale import Scale
 from pathlib import Path
 
+from dis_snek import (CommandTypes, InteractionContext, Message, Scale, Snake,
+                      context_menu)
 from dotenv import load_dotenv
 
 load_dotenv()
