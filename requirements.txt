@@ -1,2 +1,2 @@
-dis-snek
+dis-snek==6.0.0
 python-dotenv
