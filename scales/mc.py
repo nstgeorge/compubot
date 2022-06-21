@@ -10,7 +10,8 @@ SETTINGS = json.load(open("resources/settings.json"))
 LOGGER = logging.getLogger()
 
 QUICK_REFERENCE = {
-    'ea': 'cloud.elysiumalchemy.com'
+    'ea': 'cloud.elysiumalchemy.com',
+    '': 'cloud.elysiumalchemy.com'
 }
 
 class Minecraft(Scale):

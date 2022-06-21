@@ -40,6 +40,7 @@ client.grow_scale("scales.when")
 client.grow_scale("scales.ip")
 client.grow_scale("scales.mock")
 client.grow_scale("scales.mc")
+client.grow_scale("scales.locate")
 # client.grow_scale(debug_scale)
 
 client.start(TOKEN)
