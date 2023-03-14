@@ -1,4 +1,4 @@
-dis-snek==6.0.0
+discord-py-interactions==4.4.0
 python-dotenv
 mcstatus
 requests

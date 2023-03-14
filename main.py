@@ -3,9 +3,10 @@ import os
 import sys
 import time
 
-import dis_snek
-from dis_snek import Intents, Snake, listen
+import interactions
 from dotenv import load_dotenv
+
+from commands.ip import IP
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -26,21 +27,19 @@ logging.getLogger().addHandler(stdoutHandler)
 COMMAND_POST_URL = "https://discord.com/api/v8/applications/923647717375344660/commands"
 COMMAND_POST_GUILD_URL = "https://discord.com/api/v8/applications/923647717375344660/guilds/367865912952619018/commands"
 
-client = Snake(intents=Intents.DEFAULT, sync_interactions=True)
+bot = interactions.Client(token=TOKEN)
 
+bot.load('commands.ip')
+bot.load('commands.kill')
+bot.load('commands.locate')
+bot.load('commands.mc')
+bot.load('commands.mock')
+bot.load('commands.quote')
+bot.load('commands.when')
 
-@listen()
-async def on_ready():
-    print("Connected to Discord! Running in {} mode.".format(ENVTYPE))
-    print("Dis-Snek version: {}".format(dis_snek.__version__))
+# @listen()
+# async def on_ready():
+#     print("Connected to Discord! Running in {} mode.".format(ENVTYPE))
+#     print("Dis-Snek version: {}".format(dis_snek.__version__))
 
-client.grow_scale("scales.quote")
-client.grow_scale("scales.kill")
-client.grow_scale("scales.when")
-client.grow_scale("scales.ip")
-client.grow_scale("scales.mock")
-client.grow_scale("scales.mc")
-client.grow_scale("scales.locate")
-# client.grow_scale(debug_scale)
-
-client.start(TOKEN)
+bot.start()
