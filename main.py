@@ -37,9 +37,10 @@ bot.load('commands.mock')
 bot.load('commands.quote')
 bot.load('commands.when')
 
-# @listen()
-# async def on_ready():
-#     print("Connected to Discord! Running in {} mode.".format(ENVTYPE))
-#     print("Dis-Snek version: {}".format(dis_snek.__version__))
+
+@bot.event()
+async def on_start():
+    print("Connected to Discord! Running in {} mode.".format(ENVTYPE))
+    print("Interactions version: {}".format(interactions.__version__))
 
 bot.start()
