@@ -36,6 +36,7 @@ bot.load('commands.mc')
 bot.load('commands.mock')
 bot.load('commands.quote')
 bot.load('commands.when')
+bot.load('commands.sentiment')
 
 
 @bot.event()

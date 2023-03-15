@@ -42,17 +42,20 @@ class Locate(interactions.Extension):
         data = {
             'ip': ip
         }
+
         response = requests.post(
             "https://api.m3o.com/v1/ip/Lookup", json=data, headers=headers)
         response_data = response.json()
+
         if response.ok:
             g_map = gen_google_maps_url(
-                response_data['latitude'], response_data['longitude'])
-            await msg.edit('{} is registered in {}, {}. Here\'s the map: {}'.format(ip, response_data['city'],
-                                                                                    response_data['country'],
-                                                                                    g_map))
+                response_data['latitude'],
+                response_data['longitude']
+            )
+            await msg.edit('{} is registered in {}, {}. Here\'s the map: {}'.format(ip, response_data['city'], response_data['country'], g_map))
         else:
             await msg.edit('Couldn\'t locate {}. Maybe try again and be better this time?'.format(ip))
+
         LOGGER.debug("locate: {} tried to locate {}".format(ctx.author.id, ip))
 
 

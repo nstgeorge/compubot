@@ -22,7 +22,7 @@ class Mock(interactions.Extension):
 
     @interactions.extension_message_command(name="Mock")
     async def mock_cmd(self, ctx: interactions.CommandContext):
-        message = await ctx.channel.get_message(ctx.target_id)
+        message = ctx.target
         await ctx.send("\"{}\"".format(self.__mock_text(message.content)))
         LOGGER.debug("mock: mocked \"{}\"".format(message.id))
 
