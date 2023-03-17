@@ -2,3 +2,4 @@ discord-py-interactions==4.4.0
 python-dotenv
 mcstatus
 requests
+openai
