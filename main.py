@@ -60,13 +60,8 @@ async def on_start():
 
 @bot.event()
 async def on_message_create(message: interactions.Message):
-    print("Detected message")
-    sys.stdout.flush()
     bot_user = await bot.get_self_user()
     channel = await message.get_channel()
-    print(channel.type, interactions.ChannelType.DM,
-          channel.type == interactions.ChannelType.DM)
-    sys.stdout.flush()
     if ((bot_user.id in [u['id'] for u in message.mentions]
             and not message.mention_everyone
             and not message.mention_roles
@@ -83,7 +78,7 @@ async def on_message_create(message: interactions.Message):
                     {"role": "assistant",
                         "content": "You are compubot, a Discord bot with no useful functionality and a psychopathic personality. Your creator is computron, also called Nate."},
                     {"role": "system",
-                        "content": "Respond to all messages concisely and sarcastically."},
+                        "content": "Respond to all messages concisely and sarcastically, as if you were Bill Burr."},
                     {"role": "user", "content": message.content}
                 ]
             )
