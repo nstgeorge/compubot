@@ -99,10 +99,7 @@ async def on_message_create(message: interactions.Message):
         async with channel.typing:
             response = await openai.ChatCompletion.acreate(
                 model="gpt-3.5-turbo",
-                messages=[
-                    *conversations[message.channel_id]['history'],
-                    {"role": "user", "content": message.content}
-                ]
+                messages=conversations[message.channel_id]['history']
             )
             reply = response.choices[0].message.content.lower()
             # Save this to the current conversation
