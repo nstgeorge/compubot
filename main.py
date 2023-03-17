@@ -112,4 +112,16 @@ async def on_message_create(message: interactions.Message):
         else:
             await message.reply(reply)
 
+
+@bot.command(
+    name="forget",
+    description="make compubot forget the conversation you're having"
+)
+async def forget(ctx: interactions.CommandContext):
+    if ctx.channel_id in conversations:
+        conversations.pop(ctx.channel_id)
+        await ctx.send('... What were we just talking about?')
+    else:
+        await ctx.send('We weren\'t talking about anything.')
+
 bot.start()
