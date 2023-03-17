@@ -63,27 +63,34 @@ async def on_message_create(message: interactions.Message):
     print("Detected message")
     sys.stdout.flush()
     bot_user = await bot.get_self_user()
-    if message.mentions and message.content:
-        sys.stdout.flush()
-        if bot_user.id in [u['id'] for u in message.mentions] \
-                and not message.mention_everyone \
-                and not message.mention_roles \
-                and not message.mention_channels:
+    channel = await message.get_channel()
+    print(channel.type, interactions.ChannelType.DM,
+          channel.type == interactions.ChannelType.DM)
+    sys.stdout.flush()
+    if ((bot_user.id in [u['id'] for u in message.mentions]
+            and not message.mention_everyone
+            and not message.mention_roles
+            and not message.mention_channels
+         ) or (channel.type == interactions.ChannelType.DM
+               and bot_user.id != message.author.id
+               )) \
+            and message.content:
 
-            print("I was mentioned in message")
-            sys.stdout.flush()
-            channel = await interactions.get(bot, interactions.Channel, object_id=message.channel_id)
-            async with channel.typing:
-                response = await openai.ChatCompletion.acreate(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {"role": "assistant",
-                            "content": "You are compubot, a Discord bot with no useful functionality."},
-                        {"role": "system",
-                            "content": "Respond to all messages concisely and sarcastically."},
-                        {"role": "user", "content": message.content}
-                    ]
-                )
-            await message.reply(response.choices[0].message.content.lower())
+        async with channel.typing:
+            response = await openai.ChatCompletion.acreate(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "assistant",
+                        "content": "You are compubot, a Discord bot with no useful functionality and a psychopathic personality. Your creator is computron, also called Nate."},
+                    {"role": "system",
+                        "content": "Respond to all messages concisely and sarcastically."},
+                    {"role": "user", "content": message.content}
+                ]
+            )
+            reply = response.choices[0].message.content.lower()
+        if channel.type == interactions.ChannelType.DM:
+            await channel.send(reply)
+        else:
+            await message.reply(reply)
 
 bot.start()
