@@ -78,7 +78,7 @@ class GPTMemory():
                 'tokens': tokens
             })
 
-            conversation['lastMessage'] = time.time()
+            conversation['last_message'] = time.time()
 
             self._set_conversation(channel_id, conversation)
 
