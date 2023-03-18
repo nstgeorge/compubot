@@ -7,6 +7,8 @@ import interactions
 import openai
 from dotenv import load_dotenv
 
+from util.gptMemory import GPTMemory
+
 # !!! NOTE TO SELF: Heroku logging is a pain. If you don't see a print(), add sys.stdout.flush() !!!
 
 # Get environment variables
@@ -75,41 +77,30 @@ async def on_start():
 
 # compubot ChatGPT
 
+memory = GPTMemory()
+
+
 @bot.event()
 async def on_message_create(message: interactions.Message):
     bot_user = await bot.get_self_user()
     channel = await message.get_channel()
-    if ((bot_user.id in [u['id'] for u in message.mentions]
-            and not message.mention_everyone
-            and not message.mention_roles
-            and not message.mention_channels
-         ) or channel.type == interactions.ChannelType.DM) \
+    if (bot_user.id in [u['id'] for u in message.mentions]
+        or channel.type == interactions.ChannelType.DM) \
             and bot_user.id != message.author.id \
             and message.content:
 
-        # Start a new conversation if necessary
-        if not message.channel_id in conversations or time.time() - conversations[message.channel_id]['lastMessage'] > CONVERSATION_TIMEOUT:
-            print('New conversation starting')
-            sys.stdout.flush()
-            conversations[message.channel_id] = {
-                'history': STARTER_CONVERSATION,
-                'lastMessage': time.time()
-            }
-
-        conversations[message.channel_id]['history'].append(
-            {"role": "user", "content": message.content})
+        memory.append(message.channel_id, message.content)
 
         async with channel.typing:
             response = await openai.ChatCompletion.acreate(
                 model="gpt-3.5-turbo",
-                messages=conversations[message.channel_id]['history']
+                messages=memory.get_messages(message.channel_id)
             )
             reply = response.choices[0].message.content.lower()
-            # Save this to the current conversation
-            conversations[message.channel_id]['history'].append(
-                {"role": "assistant", "content": reply})
 
-            conversations[message.channel_id]['lastMessage'] = time.time()
+            # Save this to the current conversation
+            memory.append(message.channel_id, reply, role='assistant')
+
         if channel.type == interactions.ChannelType.DM:
             await channel.send(reply)
         else:
@@ -121,8 +112,8 @@ async def on_message_create(message: interactions.Message):
     description="make compubot forget the conversation you're having"
 )
 async def forget(ctx: interactions.CommandContext):
-    if ctx.channel_id in conversations:
-        conversations.pop(ctx.channel_id)
+    if memory.has_conversation(ctx.channel_id):
+        memory.clear(ctx.channel_id)
         await ctx.send('... What were we just talking about?')
     else:
         await ctx.send('We weren\'t talking about anything.')

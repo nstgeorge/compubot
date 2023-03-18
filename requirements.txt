@@ -3,3 +3,4 @@ python-dotenv
 mcstatus
 requests
 openai
+tiktoken
