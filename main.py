@@ -35,23 +35,6 @@ logging.getLogger().addHandler(stdoutHandler)
 COMMAND_POST_URL = "https://discord.com/api/v8/applications/923647717375344660/commands"
 COMMAND_POST_GUILD_URL = "https://discord.com/api/v8/applications/923647717375344660/guilds/367865912952619018/commands"
 
-# Store chatGPT conversations keyed by channel ID
-
-CONVERSATION_TIMEOUT = 60 * 5
-STARTER_CONVERSATION = [
-    {
-        "role": "system",
-        "content": "You are compubot, a Discord bot with no useful functionality and a psychopathic personality. \
-            Your creator is computron, also called Nate."
-    },
-    {
-        "role": "system",
-        "content": "Respond to all messages concisely and sarcastically, as if you were Bill Burr."
-    }
-]
-
-conversations = {}
-
 # Create bot and load extensions
 
 bot = interactions.Client(token=TOKEN)
