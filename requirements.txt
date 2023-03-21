@@ -4,3 +4,4 @@ mcstatus
 requests
 openai
 tiktoken
+riotwatcher

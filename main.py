@@ -47,6 +47,7 @@ bot.load('commands.mock')
 bot.load('commands.quote')
 bot.load('commands.when')
 bot.load('commands.sentiment')
+bot.load('commands.rank')
 
 # Print on start
 
