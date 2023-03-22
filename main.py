@@ -39,15 +39,15 @@ COMMAND_POST_GUILD_URL = "https://discord.com/api/v8/applications/92364771737534
 
 bot = interactions.Client(token=TOKEN)
 
-bot.load('commands.ip')
-bot.load('commands.kill')
-bot.load('commands.locate')
-bot.load('commands.mc')
-bot.load('commands.mock')
-bot.load('commands.quote')
-bot.load('commands.when')
-bot.load('commands.sentiment')
-bot.load('commands.rank')
+bot.load('util.commands.ip')
+bot.load('util.commands.kill')
+bot.load('util.commands.locate')
+bot.load('util.commands.mc')
+bot.load('util.commands.mock')
+bot.load('util.commands.quote')
+bot.load('util.commands.when')
+bot.load('util.commands.sentiment')
+bot.load('util.commands.stats')
 
 # Print on start
 
@@ -72,8 +72,8 @@ async def on_message_create(message: interactions.Message):
         or channel.type == interactions.ChannelType.DM) \
             and bot_user.id != message.author.id \
             and message.content:
-
-        memory.append(message.channel_id, message.content)
+        memory.append(message.channel_id, '{}: {}'.format(
+            message.author.username, message.content))
 
         async with channel.typing:
             response = await openai.ChatCompletion.acreate(
@@ -81,6 +81,8 @@ async def on_message_create(message: interactions.Message):
                 messages=memory.get_messages(message.channel_id)
             )
             reply = response.choices[0].message.content.lower()
+            if reply.startswith('compubot: '):
+                reply = reply[10:]  # strip out self tags
 
             # Save this to the current conversation
             memory.append(message.channel_id, reply, role='assistant')
