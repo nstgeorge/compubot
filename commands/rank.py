@@ -37,16 +37,17 @@ class Rank(interactions.Extension):
         ]
     )
     async def league(self, ctx: interactions.CommandContext, summoner: str):
-        msg = await ctx.send('Looking for data on {}...'.format(summoner))
-        try:
-            summoner_data = self.lol_watcher.summoner.by_name(REGION, summoner)
-            rank_data = self.lol_watcher.league.by_summoner(
-                REGION, summoner_data['id'])[0]
-            await msg.edit('{} is {} {} ({} wins, {} losses).'.format(summoner, rank_data['tier'], rank_data['rank'], rank_data['wins'], rank_data['losses']))
-        except ApiError:
-            print('No data found for {}'.format(summoner))
-            await msg.edit('I couldn\'t find a summoner named {}.'.format(summoner))
-        sys.stdout.flush()
+        async with ctx.channel.typing:
+            try:
+                summoner_data = self.lol_watcher.summoner.by_name(
+                    REGION, summoner)
+                rank_data = self.lol_watcher.league.by_summoner(
+                    REGION, summoner_data['id'])[0]
+                await ctx.send('{} is {} {} ({} wins, {} losses).'.format(summoner, rank_data['tier'], rank_data['rank'], rank_data['wins'], rank_data['losses']))
+            except ApiError:
+                print('No data found for {}'.format(summoner))
+                await ctx.send('I couldn\'t find a summoner named {}.'.format(summoner))
+            sys.stdout.flush()
 
 
 def setup(bot):
