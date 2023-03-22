@@ -43,9 +43,10 @@ class Rank(interactions.Extension):
                 summoner_data = self.lol_watcher.summoner.by_name(
                     REGION, summoner)
                 rank_data = self.lol_watcher.league.by_summoner(
-                    REGION, summoner_data['id'])[0]
+                    REGION, summoner_data['id'])
                 if (len(rank_data) == 0):
                     await ctx.send('{} is not ranked this season.'.format(summoner))
+                rank_data = rank_data[0]
                 await ctx.send('{} is {} {} ({} wins, {} losses).'.format(summoner, rank_data['tier'], rank_data['rank'], rank_data['wins'], rank_data['losses']))
             except ApiError:
                 print('No data found for {}'.format(summoner))
