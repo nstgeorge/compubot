@@ -6,7 +6,7 @@ from interactions import Snowflake
 
 MODEL = 'gpt-3.5-turbo'
 CONVERSATION_TIMEOUT = 60 * 5
-TOKEN_LIMIT = 4000
+TOKEN_LIMIT = 2048
 MODEL_PROMPTS = [
     {
         "role": "system",

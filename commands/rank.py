@@ -42,7 +42,6 @@ class Rank(interactions.Extension):
             summoner_data = self.lol_watcher.summoner.by_name(REGION, summoner)
             rank_data = self.lol_watcher.league.by_summoner(
                 REGION, summoner_data['id'])[0]
-            print(rank_data)
             await msg.edit('{} is {} {} ({} wins, {} losses).'.format(summoner, rank_data['tier'], rank_data['rank'], rank_data['wins'], rank_data['losses']))
         except ApiError:
             print('No data found for {}'.format(summoner))
