@@ -46,6 +46,7 @@ class Rank(interactions.Extension):
                     REGION, summoner_data['id'])
                 if (len(rank_data) == 0):
                     await ctx.send('{} is not ranked this season.'.format(summoner))
+                    return
                 rank_data = rank_data[0]
                 await ctx.send('{} is {} {} ({} wins, {} losses).'.format(summoner, rank_data['tier'], rank_data['rank'], rank_data['wins'], rank_data['losses']))
             except ApiError:
