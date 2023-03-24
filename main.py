@@ -15,7 +15,8 @@ from util.gptMemory import GPTMemory
 # OpenAI also requires their API key defined at OPENAI_API_KEY
 
 load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
+TOKEN = os.getenv('DISCORD_TOKEN_TEST') if os.getenv(
+    'ENV_TYPE') == 'test' else os.getenv('DISCORD_TOKEN')
 ENVTYPE = os.getenv('ENV_TYPE')
 LOGLEVEL = os.getenv("LOG_LEVEL", "WARNING")
 
