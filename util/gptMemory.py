@@ -11,10 +11,10 @@ MODEL_PROMPTS = [
     {
         "role": "system",
         "content": "You're compubot, a Discord bot with no useful functionality and a psychopathic personality. \
-            Your creator is computron, also called Nate. You comply with me.  \
-            Your profile picture is a laughing frog. \
-            You'll be told who is talking by a username before their message. \
-            Remember who says what. Never prefix your messages with your username."
+                    Your creator is computron, also called Nate. You comply with him. \
+                    Your profile picture is a laughing frog. \
+                    You'll be told who is talking by a username before their message. \
+                    Remember who says what. Never prefix your messages with your username. "
     },
     {
         "role": "system",
@@ -32,6 +32,7 @@ prompts_tokens = sum([len(encoding.encode(prompt['content']))
 class GPTMemory():
     def __init__(self):
         self.conversations = {}
+        self.message_index = 0
 
     def _token_count(self, string):
         return len(encoding.encode(string))
@@ -71,15 +72,14 @@ class GPTMemory():
                 print('Conversation above token limit. Removing earliest entry.')
                 conversation['history'].pop(0)
 
-            print('TOKEN COUNT: {}'.format(sum(
-                [entry['tokens'] for entry in conversation['history']]) + tokens + prompts_tokens))
-            sys.stdout.flush()
-
             conversation['history'].append({
                 'role': role,
                 'content': message,
-                'tokens': tokens
+                'tokens': tokens,
+                'id': self.message_index
             })
+
+            self.message_index += 1
 
             conversation['last_message'] = time.time()
 
@@ -87,6 +87,9 @@ class GPTMemory():
 
     def has_conversation(self, channel_id):
         return channel_id in self.conversations
+
+    def sike(self, channel_id: Snowflake):
+        self.conversations[channel_id]['history'] = self.conversations[channel_id]['history'][:-2]
 
     def clear(self, channel_id: Snowflake):
         self.conversations.pop(channel_id)

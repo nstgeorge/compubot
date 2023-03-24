@@ -15,10 +15,26 @@ from util.gptMemory import GPTMemory
 # OpenAI also requires their API key defined at OPENAI_API_KEY
 
 load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN_TEST') if os.getenv(
-    'ENV_TYPE') == 'test' else os.getenv('DISCORD_TOKEN')
 ENVTYPE = os.getenv('ENV_TYPE')
+TOKEN = os.getenv('DISCORD_TOKEN_TEST') if ENVTYPE == 'test' else os.getenv(
+    'DISCORD_TOKEN')
 LOGLEVEL = os.getenv("LOG_LEVEL", "WARNING")
+
+MY_ID = '186691115720769536'
+
+APPLICATION_IDS = {
+    'test': '1088680993910702090',
+    'prod': '923647717375344660'
+}
+
+FORTNITE_ID = '432980957394370572'
+
+PING_WHEN_PLAYING_FORTNITE = [
+    '344471073368178698',  # Jackson
+    '234927911562510336'  # Colin
+]
+
+CHANNEL_TO_PING = '717977225168683090'  # rushmobies
 
 # Set up logging
 
@@ -65,6 +81,36 @@ async def on_start():
 memory = GPTMemory()
 
 
+async def gptHandleMessage(message: interactions.Message):
+    channel = await message.get_channel()
+
+    clean_content = message.content.replace(
+        '<@{}>'.format(APPLICATION_IDS[ENVTYPE]), 'compubot')
+
+    memory.append(message.channel_id, '{}: {}'.format(
+        message.author.username, clean_content))
+
+    async with channel.typing:
+        response = await openai.ChatCompletion.acreate(
+            model="gpt-3.5-turbo",
+            messages=memory.get_messages(message.channel_id)
+        )
+        reply = response.choices[0].message.content.lower().strip()
+        if reply.startswith('compubot: '):
+            reply = reply[10:]  # strip out self tags
+
+        # Save this to the current conversation
+        memory.append(message.channel_id, reply, role='assistant')
+
+    if channel.type == interactions.ChannelType.DM:
+        await channel.send(reply)
+    else:
+        await message.reply(reply)
+
+
+# Event handlers
+
+
 @bot.event()
 async def on_message_create(message: interactions.Message):
     bot_user = await bot.get_self_user()
@@ -73,25 +119,19 @@ async def on_message_create(message: interactions.Message):
         or channel.type == interactions.ChannelType.DM) \
             and bot_user.id != message.author.id \
             and message.content:
-        memory.append(message.channel_id, '{}: {}'.format(
-            message.author.username, message.content))
+        await gptHandleMessage(message)
 
-        async with channel.typing:
-            response = await openai.ChatCompletion.acreate(
-                model="gpt-3.5-turbo",
-                messages=memory.get_messages(message.channel_id)
-            )
-            reply = response.choices[0].message.content.lower()
-            if reply.startswith('compubot: '):
-                reply = reply[10:]  # strip out self tags
+    if message.content and 'cock' in message.content.lower():
+        await message.create_reaction('YEP:1088687844148641902')
 
-            # Save this to the current conversation
-            memory.append(message.channel_id, reply, role='assistant')
 
-        if channel.type == interactions.ChannelType.DM:
-            await channel.send(reply)
-        else:
-            await message.reply(reply)
+@bot.event()
+async def on_presence_update(activity: interactions.PresenceActivity):
+    if activity.user.id in PING_WHEN_PLAYING_FORTNITE and FORTNITE_ID in [a.application_id for a in activity.activities]:
+        await bot._http.get_channel(CHANNEL_TO_PING).send('<wakege:1045396302525120602> ALERT <@{}>: <@{}> is now playing Fortnite. <cringe:874735256190734337>'.format(MY_ID, activity.user.id))
+
+
+# GPT commands
 
 
 @bot.command(
@@ -104,5 +144,18 @@ async def forget(ctx: interactions.CommandContext):
         await ctx.send('... What were we just talking about?')
     else:
         await ctx.send('We weren\'t talking about anything.')
+
+
+@bot.command(
+    name="sike",
+    description="make compubot forget the last message"
+)
+async def sike(ctx: interactions.CommandContext):
+    if memory.has_conversation(ctx.channel_id):
+        memory.sike(ctx.channel_id)
+        await ctx.send('... Huh?')
+    else:
+        await ctx.send('We weren\'t talking about anything.')
+
 
 bot.start()
