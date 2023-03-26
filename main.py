@@ -1,11 +1,16 @@
+import asyncio
+import json
 import logging
 import os
+import random
 import sys
+import threading
 import time
 
 import interactions
 import openai
 from dotenv import load_dotenv
+from interactions.ext.tasks import IntervalTrigger, create_task
 
 from util.gptMemory import GPTMemory
 
@@ -36,6 +41,10 @@ PING_WHEN_PLAYING_FORTNITE = [
 
 CHANNEL_TO_PING = '717977225168683090'  # rushmobies
 
+EVERY_24_HOURS = 60 * 60 * 24
+
+PRESENCE_OBJECTS = json.load(open("resources/bot_presence.json"))
+
 # Set up logging
 
 if not os.path.exists('logs'):
@@ -54,6 +63,7 @@ COMMAND_POST_GUILD_URL = "https://discord.com/api/v8/applications/92364771737534
 
 # Create bot and load extensions
 
+
 bot = interactions.Client(token=TOKEN)
 
 bot.load('util.commands.ip')
@@ -66,15 +76,32 @@ bot.load('util.commands.when')
 bot.load('util.commands.sentiment')
 bot.load('util.commands.stats')
 
-# Print on start
+
+@create_task(IntervalTrigger(EVERY_24_HOURS))
+async def update_presence():
+    random_presence = random.choice(PRESENCE_OBJECTS)
+    print("Updating presence: {}".format(random_presence['name']))
+    sys.stdout.flush()
+    presence = interactions.ClientPresence(
+        activities=[
+            interactions.PresenceActivity(
+                name=random_presence['name'], type=random_presence['type'])
+        ],
+        status=interactions.StatusType.ONLINE,
+        afk=False
+    )
+    await bot.change_presence(presence)
+
+# on bot start, do stuff
 
 
 @bot.event()
 async def on_start():
+    await update_presence()
+    update_presence.start()
     print("Connected to Discord! Running in {} mode.".format(ENVTYPE))
     print("Interactions version: {}".format(interactions.__version__))
     sys.stdout.flush()
-
 
 # compubot ChatGPT
 
