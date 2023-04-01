@@ -11,6 +11,8 @@ import interactions
 import openai
 from dotenv import load_dotenv
 from interactions.ext.tasks import IntervalTrigger, create_task
+from openai.error import RateLimitError, Timeout
+from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from util.gptMemory import GPTMemory
 
@@ -108,6 +110,11 @@ async def on_start():
 memory = GPTMemory()
 
 
+def sleep_log():
+    print('ChatGPT call failed! Retrying...')
+
+
+@retry(wait=wait_random_exponential(min=1, max=5), stop=stop_after_attempt(3), reraise=True, before_sleep=sleep_log)
 async def gptHandleMessage(message: interactions.Message):
     channel = await message.get_channel()
 
@@ -146,7 +153,14 @@ async def on_message_create(message: interactions.Message):
         or channel.type == interactions.ChannelType.DM) \
             and bot_user.id != message.author.id \
             and message.content:
-        await gptHandleMessage(message)
+        try:
+            await gptHandleMessage(message)
+        except Timeout:
+            print('ChatGPT API timed out.')
+        except RateLimitError as err:
+            print('Hit rate limit: ', err)
+        except Exception as err:
+            print('An unknown error has occurred: ', err)
 
     if message.content and 'cock' in message.content.lower():
         await message.create_reaction('YEP:1088687844148641902')

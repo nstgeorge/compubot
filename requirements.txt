@@ -6,3 +6,4 @@ openai
 tiktoken
 riotwatcher
 interactions-tasks
+tenacity
