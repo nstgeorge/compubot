@@ -1,6 +1,6 @@
 discord-py-interactions==4.4.0
 python-dotenv
-mcstatus
+mcstatus==11.0.0rc3
 requests
 openai
 tiktoken
