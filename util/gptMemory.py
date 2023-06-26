@@ -13,7 +13,7 @@ async def channel_info_handle(message: Message):
     channel = await message.get_channel()
     if channel.type == ChannelType.GUILD_TEXT:
         server = await message.get_guild()
-        return f"The server name is {server.name} and the channel is {channel.name}, with {channel.member_count} members"
+        return f"The server name is {server.name} and the channel is {channel.name}"
     else:
         members = [member.username for member in channel.recipients]
         return f"This is a DM with {', '.join(members)}"
