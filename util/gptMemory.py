@@ -3,20 +3,6 @@ import time
 
 import tiktoken
 from interactions import Message, Snowflake
-from interactions.api.models.channel import ChannelType
-
-from util.commands.mc import get_status_handle
-
-
-# Get information about the discord server/channel
-async def channel_info_handle(message: Message):
-    channel = await message.get_channel()
-    if channel.type == ChannelType.GUILD_TEXT:
-        server = await message.get_guild()
-        return f"The server name is {server.name} and the channel is {channel.name}"
-    else:
-        members = [member.username for member in channel.recipients]
-        return f"This is a DM with {', '.join(members)}"
 
 MODEL = 'gpt-3.5-turbo-0613'
 CONVERSATION_TIMEOUT = 60 * 5
@@ -36,43 +22,10 @@ MODEL_PROMPTS = [
     }
 ]
 
-FUNCTIONS = [
-    {
-        'name': 'minecraft_server',
-        'description': 'given an IP address, get the player status of a minecraft server.',
-        'parameters': {
-            'type': 'object',
-            'properties': {
-                'ip': {
-                    'type': 'string',
-                    'description': 'the IP address of the minecraft server. If none is provided, use cloud.elysiumalchemy.com.'
-                },
-            },
-            'required': ['ip']
-        }
-    },
-    {
-        'name': 'channel_info',
-        'description': 'Get information about the discord server and channel you\'re in',
-        'parameters': {
-            'type': 'object',
-            'properties': {}
-        }
-    }
-]
-
-FUNCTION_CALLS = {
-    'minecraft_server': get_status_handle,
-    'channel_info': channel_info_handle
-}
-
 encoding = tiktoken.encoding_for_model(MODEL)
 prompts_tokens = sum(
     [len(encoding.encode(prompt['content']))
      for prompt in MODEL_PROMPTS]
-) + sum(
-    [len(encoding.encode(func['description']))
-     for func in FUNCTIONS]
 )
 
 
@@ -112,9 +65,6 @@ class GPTMemory():
             *MODEL_PROMPTS,
             *[{'role': entry['role'], 'content': entry['content']} for entry in self._get_conversation(channel_id)['history']]
         ]
-
-    def get_functions(self):
-        return FUNCTIONS
 
     def append(self, channel_id: Snowflake, message: str, role='user'):
         if len(message) > 0:

@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import json
 import logging
 import os
@@ -14,7 +15,8 @@ from interactions.ext.tasks import IntervalTrigger, create_task
 from openai.error import RateLimitError, Timeout
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
-from util.gptMemory import FUNCTION_CALLS, MODEL, GPTMemory
+from util.functionDefinitions import FUNCTION_CALLS, FUNCTIONS
+from util.gptMemory import MODEL, GPTMemory
 
 # !!! NOTE TO SELF: Heroku logging is a pain. If you don't see a print(), add sys.stdout.flush() !!!
 
@@ -129,7 +131,7 @@ async def gptHandleMessage(message: interactions.Message):
         response = await openai.ChatCompletion.acreate(
             model=MODEL,
             messages=memory.get_messages(message.channel_id),
-            functions=memory.get_functions()
+            functions=FUNCTIONS
         )
 
         resp = response.choices[0].message
@@ -139,15 +141,20 @@ async def gptHandleMessage(message: interactions.Message):
             print(f"Function call to {function_name}...")
             function_to_call = FUNCTION_CALLS[function_name]
             function_args = json.loads(resp["function_call"]["arguments"])
-            function_response = await function_to_call(message, **function_args)
+            if inspect.iscoroutinefunction(function_to_call):
+                function_response = await function_to_call(memory=memory, message=message, **function_args)
+            else:
+                function_response = function_to_call(
+                    memory=memory, message=message, **function_args)
+
             print(f"{function_name} response: {function_response}")
             memory.append(message.channel_id,
-                          function_response, role='assistant')
+                          function_response, role='system')
 
             response = await openai.ChatCompletion.acreate(
                 model=MODEL,
                 messages=memory.get_messages(message.channel_id),
-                functions=memory.get_functions(),
+                functions=FUNCTIONS,
                 function_call="none"
             )
 

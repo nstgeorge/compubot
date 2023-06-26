@@ -15,7 +15,7 @@ QUICK_REFERENCE = {
 # Handle a request from natural language
 
 
-def get_status_handle(message: interactions.Message, ip: str):
+def get_status_handle(memory, message, ip: str):
     return get_status(ip)
 
 
