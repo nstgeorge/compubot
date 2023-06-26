@@ -5,7 +5,7 @@ import tiktoken
 from interactions import Message, Snowflake
 
 MODEL = 'gpt-3.5-turbo-0613'
-CONVERSATION_TIMEOUT = 60 * 5
+CONVERSATION_TIMEOUT = 60 * 10
 TOKEN_LIMIT = 2048
 MODEL_PROMPTS = [
     {
