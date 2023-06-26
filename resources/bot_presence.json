@@ -36,10 +36,6 @@
     "name": "external bleeding"
   },
   {
-    "type": 3,
-    "name": "my life fall away from me"
-  },
-  {
     "type": 2,
     "name": "cars being smashed into those little cubes"
   },
@@ -70,5 +66,13 @@
   {
     "type": 2,
     "name": "obama speeches played backward"
+  },
+  {
+    "type": 0,
+    "name": "Fortnite (just kidding)"
+  },
+  {
+    "type": 3,
+    "name": "my face melt"
   }
 ]

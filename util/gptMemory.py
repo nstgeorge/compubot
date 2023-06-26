@@ -4,7 +4,9 @@ import time
 import tiktoken
 from interactions import Snowflake
 
-MODEL = 'gpt-3.5-turbo'
+from util.commands.mc import get_status
+
+MODEL = 'gpt-3.5-turbo-0613'
 CONVERSATION_TIMEOUT = 60 * 5
 TOKEN_LIMIT = 2048
 MODEL_PROMPTS = [
@@ -22,9 +24,35 @@ MODEL_PROMPTS = [
     }
 ]
 
+FUNCTIONS = [
+    {
+        'name': 'minecraft_server',
+        'description': 'given an IP address, get the player status of a minecraft server.',
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'ip': {
+                    'type': 'string',
+                    'description': 'the IP address of the minecraft server. If none is provided, use cloud.elysiumalchemy.com.'
+                },
+            },
+            'required': ['ip']
+        }
+    }
+]
+
+FUNCTION_CALLS = {
+    'minecraft_server': get_status
+}
+
 encoding = tiktoken.encoding_for_model(MODEL)
-prompts_tokens = sum([len(encoding.encode(prompt['content']))
-                     for prompt in MODEL_PROMPTS])
+prompts_tokens = sum(
+    [len(encoding.encode(prompt['content']))
+     for prompt in MODEL_PROMPTS]
+) + sum(
+    [len(encoding.encode(func['description']))
+     for func in FUNCTIONS]
+)
 
 # Manages conversations across Discord channels.
 
@@ -62,6 +90,9 @@ class GPTMemory():
             *MODEL_PROMPTS,
             *[{'role': entry['role'], 'content': entry['content']} for entry in self._get_conversation(channel_id)['history']]
         ]
+
+    def get_functions(self):
+        return FUNCTIONS
 
     def append(self, channel_id: Snowflake, message: str, role='user'):
         if len(message) > 0:

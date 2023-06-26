@@ -14,7 +14,7 @@ from interactions.ext.tasks import IntervalTrigger, create_task
 from openai.error import RateLimitError, Timeout
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
-from util.gptMemory import GPTMemory
+from util.gptMemory import FUNCTION_CALLS, MODEL, GPTMemory
 
 # !!! NOTE TO SELF: Heroku logging is a pain. If you don't see a print(), add sys.stdout.flush() !!!
 
@@ -26,6 +26,7 @@ ENVTYPE = os.getenv('ENV_TYPE')
 TOKEN = os.getenv('DISCORD_TOKEN_TEST') if ENVTYPE == 'test' else os.getenv(
     'DISCORD_TOKEN')
 LOGLEVEL = os.getenv("LOG_LEVEL", "WARNING")
+openai.api_key = os.getenv('OPENAI_API_KEY')
 
 MY_ID = '186691115720769536'
 
@@ -110,7 +111,7 @@ async def on_start():
 memory = GPTMemory()
 
 
-def sleep_log():
+def sleep_log(msg):
     print('ChatGPT call failed! Retrying...')
 
 
@@ -126,9 +127,29 @@ async def gptHandleMessage(message: interactions.Message):
 
     async with channel.typing:
         response = await openai.ChatCompletion.acreate(
-            model="gpt-3.5-turbo",
-            messages=memory.get_messages(message.channel_id)
+            model=MODEL,
+            messages=memory.get_messages(message.channel_id),
+            functions=memory.get_functions()
         )
+
+        resp = response.choices[0].message
+
+        if resp.get('function_call'):
+            function_name = resp["function_call"]["name"]
+            function_to_call = FUNCTION_CALLS[function_name]
+            function_args = json.loads(resp["function_call"]["arguments"])
+            function_response = function_to_call(
+                **function_args
+            )
+            memory.append(message.channel_id,
+                          function_response, role='assistant')
+
+            response = await openai.ChatCompletion.acreate(
+                model=MODEL,
+                messages=memory.get_messages(message.channel_id),
+                functions=memory.get_functions()
+            )
+
         reply = response.choices[0].message.content.lower().strip()
         if reply.startswith('compubot: '):
             reply = reply[10:]  # strip out self tags
@@ -136,10 +157,10 @@ async def gptHandleMessage(message: interactions.Message):
         # Save this to the current conversation
         memory.append(message.channel_id, reply, role='assistant')
 
-    if channel.type == interactions.ChannelType.DM:
-        await channel.send(reply)
-    else:
-        await message.reply(reply)
+        if channel.type == interactions.ChannelType.DM:
+            await channel.send(reply)
+        else:
+            await message.reply(reply)
 
 
 # Event handlers

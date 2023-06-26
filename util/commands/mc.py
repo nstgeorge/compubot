@@ -13,6 +13,44 @@ QUICK_REFERENCE = {
 }
 
 
+def get_status(ip: str):
+    if not ip:
+        ip = 'cloud.elysiumalchemy.com'
+    if ip in QUICK_REFERENCE.keys():
+        ip = QUICK_REFERENCE[ip]
+    server = JavaServer.lookup(ip)
+    status, query = None, None
+
+    try:
+        status = server.status()
+    except TimeoutError:
+        return 'Timed out while checking {}.'.format(ip)
+
+    try:
+        query = server.query()
+    except TimeoutError:
+        return 'The server isn\'t accepting queries, but it\'s online!'
+
+    if status.players.sample or hasattr(query, 'names'):
+        return (
+            '{} has {}/{} players online. Here\'s who is on: \n{}'.format(
+                ip,
+                status.players.online,
+                status.players.max,
+                ', '.join(query.players.names or [
+                    p.name for p in status.players.sample])
+            )
+        )
+    else:
+        return (
+            '{} has {}/{} players online.'.format(
+                ip,
+                status.players.online,
+                status.players.max
+            )
+        )
+
+
 class Minecraft(interactions.Extension):
     def __init__(self, client: interactions.Client):
         LOGGER.debug("Initialized /mc shard")
@@ -31,39 +69,10 @@ class Minecraft(interactions.Extension):
         ]
     )
     async def mc_status(self, ctx: interactions.CommandContext, ip: str):
-        if ip in QUICK_REFERENCE.keys():
-            ip = QUICK_REFERENCE[ip]
-        server = JavaServer.lookup(ip)
-        status, query = None, None
         msg = await ctx.send('Just a second...')
-        try:
-            status = server.status()
-        except TimeoutError:
-            await msg.edit('Timed out while checking {}. Did you type the right hostname and port?'.format(ip))
-            return
-        try:
-            query = server.query()
-        except TimeoutError:
-            # Server isn't accepting queries. That's okay :)
-            pass
-        if status.players.sample or hasattr(query, 'names'):
-            await msg.edit(
-                '{} has {}/{} players online. Here\'s who is on: \n{}'.format(
-                    ip,
-                    status.players.online,
-                    status.players.max,
-                    ', '.join(query.players.names or [
-                              p.name for p in status.players.sample])
-                )
-            )
-        else:
-            await msg.edit(
-                '{} has {}/{} players online.'.format(
-                    ip,
-                    status.players.online,
-                    status.players.max
-                )
-            )
+        status_str = get_status(ip)
+
+        await msg.edit(status_str)
 
         LOGGER.debug(
             "mc_status: {} checked the status of {}".format(ctx.author.id, ip))
