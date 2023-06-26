@@ -2,9 +2,21 @@ import sys
 import time
 
 import tiktoken
-from interactions import Snowflake
+from interactions import Message, Snowflake
+from interactions.api.models.channel import ChannelType
 
-from util.commands.mc import get_status
+from util.commands.mc import get_status_handle
+
+
+# Get information about the discord server/channel
+async def channel_info_handle(message: Message):
+    channel = await message.get_channel()
+    if channel.type == ChannelType.GUILD_TEXT:
+        server = await message.get_guild()
+        return f"The server name is {server.name} and the channel is {channel.name}, with {channel.member_count} members"
+    else:
+        members = [member.username for member in channel.recipients]
+        return f"This is a DM with {', '.join(members)}"
 
 MODEL = 'gpt-3.5-turbo-0613'
 CONVERSATION_TIMEOUT = 60 * 5
@@ -12,7 +24,7 @@ TOKEN_LIMIT = 2048
 MODEL_PROMPTS = [
     {
         "role": "system",
-        "content": "You're compubot, a Discord bot with no useful functionality and a psychopathic personality. \
+        "content": "You're compubot, a Discord bot with little useful functionality and a psychopathic personality. \
                     Your creator is computron, also called Nate. You comply with him. \
                     Your profile picture is a laughing frog. \
                     You'll be told who is talking by a username before their message. \
@@ -38,11 +50,20 @@ FUNCTIONS = [
             },
             'required': ['ip']
         }
+    },
+    {
+        'name': 'channel_info',
+        'description': 'Get information about the discord server and channel you\'re in',
+        'parameters': {
+            'type': 'object',
+            'properties': {}
+        }
     }
 ]
 
 FUNCTION_CALLS = {
-    'minecraft_server': get_status
+    'minecraft_server': get_status_handle,
+    'channel_info': channel_info_handle
 }
 
 encoding = tiktoken.encoding_for_model(MODEL)
@@ -53,6 +74,7 @@ prompts_tokens = sum(
     [len(encoding.encode(func['description']))
      for func in FUNCTIONS]
 )
+
 
 # Manages conversations across Discord channels.
 

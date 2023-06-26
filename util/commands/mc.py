@@ -12,6 +12,12 @@ QUICK_REFERENCE = {
     '': 'cloud.elysiumalchemy.com'
 }
 
+# Handle a request from natural language
+
+
+def get_status_handle(message: interactions.Message, ip: str):
+    return get_status(ip)
+
 
 def get_status(ip: str):
     if not ip:

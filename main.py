@@ -136,18 +136,19 @@ async def gptHandleMessage(message: interactions.Message):
 
         if resp.get('function_call'):
             function_name = resp["function_call"]["name"]
+            print(f"Function call to {function_name}...")
             function_to_call = FUNCTION_CALLS[function_name]
             function_args = json.loads(resp["function_call"]["arguments"])
-            function_response = function_to_call(
-                **function_args
-            )
+            function_response = await function_to_call(message, **function_args)
+            print(f"{function_name} response: {function_response}")
             memory.append(message.channel_id,
                           function_response, role='assistant')
 
             response = await openai.ChatCompletion.acreate(
                 model=MODEL,
                 messages=memory.get_messages(message.channel_id),
-                functions=memory.get_functions()
+                functions=memory.get_functions(),
+                function_call="none"
             )
 
         reply = response.choices[0].message.content.lower().strip()
@@ -182,6 +183,7 @@ async def on_message_create(message: interactions.Message):
             print('Hit rate limit: ', err)
         except Exception as err:
             print('An unknown error has occurred: ', err)
+            raise err
 
     if message.content and 'cock' in message.content.lower():
         await message.create_reaction('YEP:1088687844148641902')
