@@ -1,7 +1,7 @@
 from interactions import Message
 from interactions.api.models.channel import ChannelType
 
-from util.commands.debug import print_debug_handle
+from util.commands.debug import add_prompt_handle, print_debug_handle
 from util.commands.mc import get_status_handle
 
 
@@ -58,6 +58,20 @@ FUNCTIONS = [
             'type': 'object',
             'properties': {}
         }
+    },
+    {
+        'name': 'add_prompt',
+        'description': 'Adds a prompt to compubot for this conversation, only available to computron',
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'prompt': {
+                    'type': 'string',
+                    'description': 'The prompt to add to compubot. Ask the user for clarification before submitting if no prompt is clear.'
+                },
+            },
+            'required': ['prompt']
+        }
     }
 ]
 
@@ -65,5 +79,6 @@ FUNCTION_CALLS = {
     'minecraft_server': get_status_handle,
     'channel_info': channel_info_handle,
     'debug': print_debug_handle,
-    'prompt_info': prompt_info_handle
+    'prompt_info': prompt_info_handle,
+    'add_prompt': add_prompt_handle
 }
