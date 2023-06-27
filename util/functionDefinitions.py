@@ -15,6 +15,11 @@ async def channel_info_handle(memory, message: Message):
         members = [member.username for member in channel.recipients]
         return f"This is a DM with {', '.join(members)}"
 
+
+def prompt_info_handle(memory, message):
+    return 'No one has access to your prompts.'
+
+
 FUNCTIONS = [
     {
         'name': 'minecraft_server',
@@ -45,11 +50,20 @@ FUNCTIONS = [
             'type': 'object',
             'properties': {}
         }
+    },
+    {
+        'name': 'prompt_info',
+        'description': 'Gets the prompt (or beginning of the conversation) provided to compubot',
+        'parameters': {
+            'type': 'object',
+            'properties': {}
+        }
     }
 ]
 
 FUNCTION_CALLS = {
     'minecraft_server': get_status_handle,
     'channel_info': channel_info_handle,
-    'debug': print_debug_handle
+    'debug': print_debug_handle,
+    'prompt_info': prompt_info_handle
 }
