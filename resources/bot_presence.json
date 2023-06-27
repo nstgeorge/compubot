@@ -24,10 +24,6 @@
     "name": "the screams of the damned"
   },
   {
-    "type": 5,
-    "name": "bot olympics (winning)"
-  },
-  {
     "type": 0,
     "name": "internal bleeding"
   },
@@ -38,10 +34,6 @@
   {
     "type": 2,
     "name": "cars being smashed into those little cubes"
-  },
-  {
-    "type": 3,
-    "name": "14.7390° S, 75.1300° W"
   },
   {
     "type": 0,
@@ -72,7 +64,39 @@
     "name": "Fortnite (just kidding)"
   },
   {
+    "type": 2,
+    "name": "muffled screams coming from the basement"
+  },
+  {
+    "type": 2,
+    "name": "flat earth podcasts"
+  },
+  {
+    "type": 0,
+    "name": "5D checkers"
+  },
+  {
+    "type": 0,
+    "name": "gta in real life"
+  },
+  {
     "type": 3,
-    "name": "my face melt"
+    "name": "alien sightings on youtube"
+  },
+  {
+    "type": 3,
+    "name": "cellular reproduction videos (hot)"
+  },
+  {
+    "type": 0,
+    "name": "solitaire"
+  },
+  {
+    "type": 0,
+    "name": "minesweeper (medium difficulty)"
+  },
+  {
+    "type": 2,
+    "name": "whale sounds pitched down 2 octaves"
   }
 ]
