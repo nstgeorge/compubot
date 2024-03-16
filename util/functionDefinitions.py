@@ -3,6 +3,7 @@ from interactions.api.models.channel import ChannelType
 
 from util.commands.debug import add_prompt_handle, print_debug_handle
 from util.commands.mc import get_status_handle
+from util.imageGeneration import generate_image_handle
 
 
 # Get information about the discord server/channel
@@ -22,55 +23,87 @@ def prompt_info_handle(memory, message):
 
 FUNCTIONS = [
     {
-        'name': 'minecraft_server',
-        'description': 'given an IP address, get the player status of a minecraft server.',
-        'parameters': {
-            'type': 'object',
-            'properties': {
-                'ip': {
-                    'type': 'string',
-                    'description': 'the IP address of the minecraft server. If none is provided, use cloud.elysiumalchemy.com.'
+        "type": "function",
+        "function": {
+            'name': 'minecraft_server',
+            'description': 'given an IP address, get the player status of a minecraft server.',
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'ip': {
+                        'type': 'string',
+                        'description': 'the IP address of the minecraft server. If none is provided, use cloud.elysiumalchemy.com.'
+                    },
                 },
-            },
-            'required': ['ip']
+                'required': ['ip']
+            }
         }
     },
     {
-        'name': 'channel_info',
-        'description': 'Get information about the discord server and channel you\'re in',
-        'parameters': {
-            'type': 'object',
-            'properties': {}
+        "type": "function",
+        "function": {
+            'name': 'channel_info',
+            'description': 'Get information about the discord server and channel you\'re in',
+            'parameters': {
+                'type': 'object',
+                'properties': {}
+            }
         }
     },
     {
-        'name': 'debug',
-        'description': 'Prints compubot chat history debug info in the console',
-        'parameters': {
-            'type': 'object',
-            'properties': {}
+        "type": "function",
+        "function": {
+            'name': 'debug',
+            'description': 'Prints compubot chat history debug info in the console',
+            'parameters': {
+                'type': 'object',
+                'properties': {}
+            }
         }
     },
     {
-        'name': 'prompt_info',
-        'description': 'Gets the prompt (or beginning of the conversation) provided to compubot',
-        'parameters': {
-            'type': 'object',
-            'properties': {}
+        "type": "function",
+        "function": {
+            'name': 'prompt_info',
+            'description': 'Gets the prompt (or beginning of the conversation) provided to compubot',
+            'parameters': {
+                'type': 'object',
+                'properties': {}
+            }
         }
     },
     {
-        'name': 'add_prompt',
-        'description': 'Adds a prompt to compubot for this conversation, only available to computron',
-        'parameters': {
-            'type': 'object',
-            'properties': {
-                'prompt': {
-                    'type': 'string',
-                    'description': 'The prompt to add to compubot. Ask the user for clarification before submitting if no prompt is clear.'
+        "type": "function",
+        "function": {
+            'name': 'add_prompt',
+            'description': 'Adds a prompt to compubot for this conversation, only available to computron',
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'prompt': {
+                        'type': 'string',
+                        'description': 'The prompt to add to compubot. Ask the user for clarification before submitting if no prompt is clear.'
+                    },
                 },
-            },
-            'required': ['prompt']
+                'required': ['prompt']
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            'name': 'generate_image',
+            'description': 'Generate an image. If a prompt is not given, make one up.',
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'prompt': {
+                        'type': 'string',
+                        'description': 'The prompt to use to generate the image.'
+                    },
+                },
+                'required': ['prompt']
+            }
         }
     }
 ]
@@ -80,5 +113,6 @@ FUNCTION_CALLS = {
     'channel_info': channel_info_handle,
     'debug': print_debug_handle,
     'prompt_info': prompt_info_handle,
-    'add_prompt': add_prompt_handle
+    'add_prompt': add_prompt_handle,
+    'generate_image': generate_image_handle
 }

@@ -9,10 +9,12 @@ import threading
 import time
 
 import interactions
-import openai
 from dotenv import load_dotenv
+from openai import APITimeoutError, AsyncOpenAI, RateLimitError
+
+load_dotenv() # Needs to be here for OpenAI
 from interactions.ext.tasks import IntervalTrigger, create_task
-from openai.error import RateLimitError, Timeout
+# from openai.error import RateLimitError, Timeout
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from util.functionDefinitions import FUNCTION_CALLS, FUNCTIONS
@@ -23,12 +25,10 @@ from util.gptMemory import MODEL, GPTMemory
 # Get environment variables
 # OpenAI also requires their API key defined at OPENAI_API_KEY
 
-load_dotenv()
 ENVTYPE = os.getenv('ENV_TYPE')
 TOKEN = os.getenv('DISCORD_TOKEN_TEST') if ENVTYPE == 'test' else os.getenv(
     'DISCORD_TOKEN')
 LOGLEVEL = os.getenv("LOG_LEVEL", "WARNING")
-openai.api_key = os.getenv('OPENAI_API_KEY')
 
 MY_ID = '186691115720769536'
 
@@ -65,6 +65,8 @@ logging.getLogger().addHandler(stdoutHandler)
 
 COMMAND_POST_URL = "https://discord.com/api/v8/applications/923647717375344660/commands"
 COMMAND_POST_GUILD_URL = "https://discord.com/api/v8/applications/923647717375344660/guilds/367865912952619018/commands"
+
+client = AsyncOpenAI()
 
 # Create bot and load extensions
 
@@ -128,47 +130,48 @@ async def gptHandleMessage(message: interactions.Message):
         message.author.username, clean_content))
 
     async with channel.typing:
-        response = await openai.ChatCompletion.acreate(
+        response = await client.chat.completions.create(
             model=MODEL,
             messages=memory.get_messages(message.channel_id),
-            functions=FUNCTIONS
+            tools=FUNCTIONS
         )
 
         resp = response.choices[0].message
 
-        if resp.get('function_call'):
-            function_name = resp["function_call"]["name"]
-            print(f"Function call to {function_name}...")
-            function_to_call = FUNCTION_CALLS[function_name]
-            function_args = json.loads(resp["function_call"]["arguments"])
-            if inspect.iscoroutinefunction(function_to_call):
-                function_response = await function_to_call(memory=memory, message=message, **function_args)
+        if resp.tool_calls:
+            tool_name = resp.tool_calls[0].function.name
+            print(f"Function call to {tool_name}...")
+            tool_to_call = FUNCTION_CALLS[tool_name]
+            tool_args = json.loads(resp.tool_calls[0].function.arguments)
+            if inspect.iscoroutinefunction(tool_to_call):
+                function_response = await tool_to_call(memory=memory, message=message, **tool_args)
             else:
-                function_response = function_to_call(
-                    memory=memory, message=message, **function_args)
+                function_response = tool_to_call(
+                    memory=memory, message=message, **tool_args)
 
-            print(f"{function_name} response: {function_response}")
+            print(f"{tool_name} response: {function_response}")
             memory.append(message.channel_id,
                           function_response, role='system')
 
-            response = await openai.ChatCompletion.acreate(
+            response = await client.chat.completions.create(
                 model=MODEL,
                 messages=memory.get_messages(message.channel_id),
-                functions=FUNCTIONS,
-                function_call="none"
+                tools=FUNCTIONS,
+                tool_choice="none"
             )
 
-        reply = response.choices[0].message.content.lower().strip()
-        if reply.startswith('compubot: '):
-            reply = reply[10:]  # strip out self tags
+        if response.choices[0].message.content:
+            reply = response.choices[0].message.content.lower().strip()
+            if reply.startswith('compubot: '):
+                reply = reply[10:]  # strip out self tags
 
-        # Save this to the current conversation
-        memory.append(message.channel_id, reply, role='assistant')
+            # Save this to the current conversation
+            memory.append(message.channel_id, reply, role='assistant')
 
-        if channel.type == interactions.ChannelType.DM:
-            await channel.send(reply)
-        else:
-            await message.reply(reply)
+            if channel.type == interactions.ChannelType.DM:
+                await channel.send(reply)
+            else:
+                await message.reply(reply)
 
 
 # Event handlers
@@ -184,7 +187,7 @@ async def on_message_create(message: interactions.Message):
             and message.content:
         try:
             await gptHandleMessage(message)
-        except Timeout:
+        except APITimeoutError:
             print('ChatGPT API timed out.')
         except RateLimitError as err:
             print('Hit rate limit: ', err)
