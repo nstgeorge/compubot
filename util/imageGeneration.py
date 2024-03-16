@@ -1,5 +1,5 @@
 import interactions
-from openai import AsyncOpenAI, BadRequestError
+from openai import AsyncOpenAI, BadRequestError, OpenAIError
 
 client = AsyncOpenAI()
 
@@ -20,5 +20,5 @@ async def generate_image_handle(memory, message: interactions.Message, prompt):
     return "You generated a picture of {}.".format(prompt)
   except BadRequestError as e:
     return "You were unable to generate that image for the following reason: {}".format(e.message)
-  except Error:
+  except OpenAIError:
     return "You were unable to generate the image."
