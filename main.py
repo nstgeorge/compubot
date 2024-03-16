@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import json
 import logging
 import os
@@ -11,8 +12,11 @@ import interactions
 import openai
 from dotenv import load_dotenv
 from interactions.ext.tasks import IntervalTrigger, create_task
+from openai.error import RateLimitError, Timeout
+from tenacity import retry, stop_after_attempt, wait_random_exponential
 
-from util.gptMemory import GPTMemory
+from util.functionDefinitions import FUNCTION_CALLS, FUNCTIONS
+from util.gptMemory import MODEL, GPTMemory
 
 # !!! NOTE TO SELF: Heroku logging is a pain. If you don't see a print(), add sys.stdout.flush() !!!
 
@@ -24,6 +28,7 @@ ENVTYPE = os.getenv('ENV_TYPE')
 TOKEN = os.getenv('DISCORD_TOKEN_TEST') if ENVTYPE == 'test' else os.getenv(
     'DISCORD_TOKEN')
 LOGLEVEL = os.getenv("LOG_LEVEL", "WARNING")
+openai.api_key = os.getenv('OPENAI_API_KEY')
 
 MY_ID = '186691115720769536'
 
@@ -108,6 +113,11 @@ async def on_start():
 memory = GPTMemory()
 
 
+def sleep_log(msg):
+    print('ChatGPT call failed! Retrying...')
+
+
+@retry(wait=wait_random_exponential(min=1, max=5), stop=stop_after_attempt(3), reraise=True, before_sleep=sleep_log)
 async def gptHandleMessage(message: interactions.Message):
     channel = await message.get_channel()
 
@@ -119,9 +129,35 @@ async def gptHandleMessage(message: interactions.Message):
 
     async with channel.typing:
         response = await openai.ChatCompletion.acreate(
-            model="gpt-3.5-turbo",
-            messages=memory.get_messages(message.channel_id)
+            model=MODEL,
+            messages=memory.get_messages(message.channel_id),
+            functions=FUNCTIONS
         )
+
+        resp = response.choices[0].message
+
+        if resp.get('function_call'):
+            function_name = resp["function_call"]["name"]
+            print(f"Function call to {function_name}...")
+            function_to_call = FUNCTION_CALLS[function_name]
+            function_args = json.loads(resp["function_call"]["arguments"])
+            if inspect.iscoroutinefunction(function_to_call):
+                function_response = await function_to_call(memory=memory, message=message, **function_args)
+            else:
+                function_response = function_to_call(
+                    memory=memory, message=message, **function_args)
+
+            print(f"{function_name} response: {function_response}")
+            memory.append(message.channel_id,
+                          function_response, role='system')
+
+            response = await openai.ChatCompletion.acreate(
+                model=MODEL,
+                messages=memory.get_messages(message.channel_id),
+                functions=FUNCTIONS,
+                function_call="none"
+            )
+
         reply = response.choices[0].message.content.lower().strip()
         if reply.startswith('compubot: '):
             reply = reply[10:]  # strip out self tags
@@ -129,10 +165,10 @@ async def gptHandleMessage(message: interactions.Message):
         # Save this to the current conversation
         memory.append(message.channel_id, reply, role='assistant')
 
-    if channel.type == interactions.ChannelType.DM:
-        await channel.send(reply)
-    else:
-        await message.reply(reply)
+        if channel.type == interactions.ChannelType.DM:
+            await channel.send(reply)
+        else:
+            await message.reply(reply)
 
 
 # Event handlers
@@ -146,7 +182,15 @@ async def on_message_create(message: interactions.Message):
         or channel.type == interactions.ChannelType.DM) \
             and bot_user.id != message.author.id \
             and message.content:
-        await gptHandleMessage(message)
+        try:
+            await gptHandleMessage(message)
+        except Timeout:
+            print('ChatGPT API timed out.')
+        except RateLimitError as err:
+            print('Hit rate limit: ', err)
+        except Exception as err:
+            print('An unknown error has occurred: ', err)
+            raise err
 
     if message.content and 'cock' in message.content.lower():
         await message.create_reaction('YEP:1088687844148641902')
