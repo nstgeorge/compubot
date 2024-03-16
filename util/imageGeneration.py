@@ -17,8 +17,8 @@ async def generate_image_handle(memory, message: interactions.Message, prompt):
   try:
     image = await generate_image(prompt)
     await resp.edit(image.data[0].url)
-    return "You generated a picture of {}.".format(prompt)
+    return "There is now a picture of {} in the chat.".format(prompt)
   except BadRequestError as e:
-    return "You were unable to generate that image for the following reason: {}".format(e.message)
+    return "Unable to generate that image for the following reason: {}".format(e.message)
   except OpenAIError:
-    return "You were unable to generate the image."
+    return "Unable to generate the image."
