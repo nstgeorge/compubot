@@ -93,7 +93,9 @@ FUNCTIONS = [
         "type": "function",
         "function": {
             'name': 'generate_image',
-            'description': 'Generate an image. If a prompt is not given, make one up.',
+            'description': 'Generate an image consistent with your personality. Ask for clarification if a prompt is not given.\
+                ONLY if specifically asked, you may come up with your own prompt. Take as long as you need to generate a unique prompt\
+                    that is consistent with your personality.',
             'parameters': {
                 'type': 'object',
                 'properties': {
