@@ -14,7 +14,6 @@ from openai import APITimeoutError, AsyncOpenAI, RateLimitError
 
 load_dotenv() # Needs to be here for OpenAI
 from interactions.ext.tasks import IntervalTrigger, create_task
-# from openai.error import RateLimitError, Timeout
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from util.functionDefinitions import FUNCTION_CALLS, FUNCTIONS
