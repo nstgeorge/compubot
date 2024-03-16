@@ -16,8 +16,8 @@ load_dotenv() # Needs to be here for OpenAI
 from interactions.ext.tasks import IntervalTrigger, create_task
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
-from util.functionDefinitions import FUNCTION_CALLS, FUNCTIONS
-from util.gptMemory import MODEL, GPTMemory
+from util.chatGPT import respondWithChatGPT
+from util.gptMemory import GPTMemory
 
 # !!! NOTE TO SELF: Heroku logging is a pain. If you don't see a print(), add sys.stdout.flush() !!!
 
@@ -120,57 +120,13 @@ def sleep_log(msg):
 
 @retry(wait=wait_random_exponential(min=1, max=5), stop=stop_after_attempt(3), reraise=True, before_sleep=sleep_log)
 async def gptHandleMessage(message: interactions.Message):
-    channel = await message.get_channel()
-
     clean_content = message.content.replace(
         '<@{}>'.format(APPLICATION_IDS[ENVTYPE]), 'compubot')
 
     memory.append(message.channel_id, '{}: """{}"""'.format(
         message.author.username, clean_content))
-
-    async with channel.typing:
-        response = await client.chat.completions.create(
-            model=MODEL,
-            messages=memory.get_messages(message.channel_id),
-            tools=FUNCTIONS
-        )
-
-        resp = response.choices[0].message
-
-        if resp.tool_calls:
-            tool_name = resp.tool_calls[0].function.name
-            print(f"Function call to {tool_name}...")
-            tool_to_call = FUNCTION_CALLS[tool_name]
-            tool_args = json.loads(resp.tool_calls[0].function.arguments)
-            if inspect.iscoroutinefunction(tool_to_call):
-                function_response = await tool_to_call(memory=memory, message=message, **tool_args)
-            else:
-                function_response = tool_to_call(
-                    memory=memory, message=message, **tool_args)
-
-            print(f"{tool_name} response: {function_response}")
-            memory.append(message.channel_id,
-                          function_response, role='system')
-
-            response = await client.chat.completions.create(
-                model=MODEL,
-                messages=memory.get_messages(message.channel_id),
-                tools=FUNCTIONS,
-                tool_choice="none"
-            )
-
-        if response.choices[0].message.content:
-            reply = response.choices[0].message.content.lower().strip()
-            if reply.startswith('compubot: '):
-                reply = reply[10:]  # strip out self tags
-
-            # Save this to the current conversation
-            memory.append(message.channel_id, reply, role='assistant')
-
-            if channel.type == interactions.ChannelType.DM:
-                await channel.send(reply)
-            else:
-                await message.reply(reply)
+    
+    await respondWithChatGPT(memory=memory, message=message)
 
 
 # Event handlers

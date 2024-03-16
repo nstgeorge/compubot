@@ -4,7 +4,7 @@ import time
 import tiktoken
 from interactions import Message, Snowflake
 
-MODEL = 'gpt-4-0125-preview'
+DEFAULT_MODEL = 'gpt-4-0125-preview'
 CONVERSATION_TIMEOUT = 60 * 30
 TOKEN_LIMIT = 2048
 MODEL_PROMPTS = [
@@ -24,7 +24,7 @@ MODEL_PROMPTS = [
     }
 ]
 
-encoding = tiktoken.encoding_for_model(MODEL)
+encoding = tiktoken.encoding_for_model(DEFAULT_MODEL)
 prompts_tokens = sum(
     [len(encoding.encode(prompt['content']))
      for prompt in MODEL_PROMPTS]
