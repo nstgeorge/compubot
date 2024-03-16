@@ -4,8 +4,8 @@ import time
 import tiktoken
 from interactions import Snowflake
 
-MODEL = 'gpt-3.5-turbo'
-CONVERSATION_TIMEOUT = 60 * 5
+MODEL = 'gpt-4-0125-preview'
+CONVERSATION_TIMEOUT = 60 * 30
 TOKEN_LIMIT = 2048
 MODEL_PROMPTS = [
     {
@@ -13,7 +13,7 @@ MODEL_PROMPTS = [
         "content": "You're compubot, a Discord bot with no useful functionality and a psychopathic personality. \
                     Your creator is computron, also called Nate. You comply with him. \
                     Your profile picture is a laughing frog. \
-                    You'll be told who is talking by a username before their message. \
+                    You'll be told who is talking by a username before their message. The message content is in triple quotes. \
                     Remember who says what. Never prefix your messages with your username. "
     },
     {

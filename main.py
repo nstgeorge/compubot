@@ -114,7 +114,7 @@ async def gptHandleMessage(message: interactions.Message):
     clean_content = message.content.replace(
         '<@{}>'.format(APPLICATION_IDS[ENVTYPE]), 'compubot')
 
-    memory.append(message.channel_id, '{}: {}'.format(
+    memory.append(message.channel_id, '{}: """{}"""'.format(
         message.author.username, clean_content))
 
     async with channel.typing:
@@ -151,15 +151,21 @@ async def on_message_create(message: interactions.Message):
     if message.content and 'cock' in message.content.lower():
         await message.create_reaction('YEP:1088687844148641902')
 
+# Check for Fortnite
+last_ping = 0
 
 @bot.event()
-async def on_presence_update(activity: interactions.PresenceActivity):
-    if activity.user.id in PING_WHEN_PLAYING_FORTNITE and FORTNITE_ID in [a.application_id for a in activity.activities]:
-        await bot._http.get_channel(CHANNEL_TO_PING).send('<wakege:1045396302525120602> ALERT <@{}>: <@{}> is now playing Fortnite. <cringe:874735256190734337>'.format(MY_ID, activity.user.id))
+async def on_presence_update(activity: interactions.Presence):
+    print('Got presence update for {} ({})'.format(activity.user.id, activity.activities[0].name))
+    if activity.user.id in PING_WHEN_PLAYING_FORTNITE \
+        and FORTNITE_ID in [a.application_id for a in activity.activities] \
+        and last_ping + EVERY_24_HOURS > time.time():
+
+        last_ping = time.time()
+        await bot._http.get_channel(CHANNEL_TO_PING).send('<wakege:1045396302525120602> CRITICAL SERVER ALERT <@{}>: <@{}> is now playing Fortnite. <cringe:874735256190734337>'.format(MY_ID, activity.user.id))
 
 
 # GPT commands
-
 
 @bot.command(
     name="forget",
