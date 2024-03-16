@@ -95,7 +95,7 @@ FUNCTIONS = [
             'name': 'generate_image',
             'description': 'Generate an image consistent with your personality. Ask for clarification if a prompt is not given.\
                 ONLY if specifically asked, you may come up with your own prompt. Take as long as you need to generate a unique prompt\
-                    that is consistent with your personality.',
+                    that is consistent with your personality. You may add some detail to the user prompt as long as it doesn\'t change the overall idea.',
             'parameters': {
                 'type': 'object',
                 'properties': {
