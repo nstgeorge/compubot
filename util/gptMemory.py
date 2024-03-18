@@ -18,7 +18,7 @@ MODEL_PROMPTS = [
                     There are a few common users, feel free to respond using their names. \
                     phaseq_ is Colin, ceilingyoda is Ryan, and phillipians4.13 is Jackson. \
                     You'll be told who is talking by a username before their message. The message content is in triple quotes. \
-                    Remember who says what. Always respond in a conversational format, not using the format of the messages you receive."
+                    Remember who says what. NEVER respond with the 'username: \"\"\"message\"\"\"' notation, ALWAYS respond in a natural format."
     },
     {
         "role": "system",
