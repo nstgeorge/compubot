@@ -1,22 +1,21 @@
-import asyncio
-import inspect
 import json
 import logging
 import os
 import random
 import sys
-import threading
 import time
 
 import interactions
 from dotenv import load_dotenv
+from interactions import Intents
+from interactions.utils.get import get
 from openai import APITimeoutError, AsyncOpenAI, RateLimitError
 
 load_dotenv() # Needs to be here for OpenAI
 from interactions.ext.tasks import IntervalTrigger, create_task
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
-from util.chatGPT import respondWithChatGPT
+from util.chatGPT import oneOffResponse, respondWithChatGPT
 from util.gptMemory import GPTMemory
 
 # !!! NOTE TO SELF: Heroku logging is a pain. If you don't see a print(), add sys.stdout.flush() !!!
@@ -70,7 +69,7 @@ client = AsyncOpenAI()
 # Create bot and load extensions
 
 
-bot = interactions.Client(token=TOKEN)
+bot = interactions.Client(token=TOKEN, intents=Intents.DEFAULT | Intents.GUILD_MESSAGE_CONTENT | Intents.GUILD_PRESENCES | Intents.GUILD_MEMBERS)
 
 bot.load('util.commands.ip')
 bot.load('util.commands.kill')
@@ -81,6 +80,7 @@ bot.load('util.commands.quote')
 bot.load('util.commands.when')
 bot.load('util.commands.sentiment')
 bot.load('util.commands.stats')
+bot.load('util.commands.imageGeneration')
 
 
 @create_task(IntervalTrigger(EVERY_24_HOURS))
@@ -157,16 +157,16 @@ async def on_message_create(message: interactions.Message):
 last_ping = 0
 
 @bot.event()
-async def on_presence_update(activity: interactions.Presence):
-    print('Got presence update for {} ({})'.format(activity.user.id, activity.activities[0].name))
-    if activity.user.id in PING_WHEN_PLAYING_FORTNITE \
-        and FORTNITE_ID in [a.application_id for a in activity.activities] \
-        and last_ping + EVERY_24_HOURS > time.time():
-
-        last_ping = time.time()
-        await bot._http.get_channel(CHANNEL_TO_PING).send('<wakege:1045396302525120602> CRITICAL SERVER ALERT <@{}>: <@{}> is now playing Fortnite. <cringe:874735256190734337>'.format(MY_ID, activity.user.id))
-
-
+async def on_presence_update(_, activity: interactions.Presence):
+    if len(activity.activities) > 0:
+        print('Got presence update for {} ({})'.format(activity.user.id, activity.activities[0].name))
+        if activity.user.id in PING_WHEN_PLAYING_FORTNITE \
+            and FORTNITE_ID in [a.application_id for a in activity.activities] \
+            and last_ping + EVERY_24_HOURS > time.time():
+            last_ping = time.time()
+            response = await oneOffResponse("<@{}> just started up Fortnite. Roast them mercilessly and say their name.".format(activity.user.id))
+            channel = await get(bot, interactions.Channel, object_id=CHANNEL_TO_PING)
+            await channel.send(response)
 # GPT commands
 
 @bot.command(

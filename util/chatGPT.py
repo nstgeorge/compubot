@@ -5,7 +5,8 @@ import interactions
 from openai import AsyncOpenAI, OpenAIError
 
 from util.functionDefinitions import FUNCTION_CALLS, FUNCTIONS
-from util.gptMemory import DEFAULT_MODEL, GPTMemory
+from util.gptMemory import DEFAULT_MODEL, MODEL_PROMPTS, GPTMemory
+from util.replyFilters import cleanReply, stripQuotations, stripSelfTag
 
 client = AsyncOpenAI()
 
@@ -63,8 +64,13 @@ async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, m
             print(f"{tool_name} response: {function_response}")
 
             if not tool_name == 'invoke_gpt_4':
-                memory.append(message.channel_id,
-                            function_response, role='system')
+                memory.append(
+                    message.channel_id,
+                    function_response, 
+                    role='function',
+                    name=tool_name,
+                    tool_call_id=resp.tool_calls[0].id
+                )
 
                 response = await client.chat.completions.create(
                     model=model,
@@ -74,9 +80,10 @@ async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, m
                 )
 
         if response.choices[0].message.content and not NO_POST_RESPONSE_FLAG:
-            reply = response.choices[0].message.content.lower().strip()
-            if reply.startswith('compubot: '):
-                reply = reply[10:]  # strip out self tags
+            filters = [cleanReply, stripSelfTag, stripQuotations]
+            reply = response.choices[0].message.content
+            for filter in filters:
+                reply = filter(reply)
 
             # Save this to the current conversation
             memory.append(message.channel_id, reply, role='assistant')
@@ -85,3 +92,16 @@ async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, m
                 await channel.send(reply)
             else:
                 await message.reply(reply)
+
+async def oneOffResponse(prompt, role="system"):
+    response = await client.chat.completions.create(
+        model=DEFAULT_MODEL,
+        messages=[
+            *MODEL_PROMPTS,
+            {
+                "role": role,
+                "content": prompt
+            }
+        ]
+    )
+    return response.choices[0].message.content

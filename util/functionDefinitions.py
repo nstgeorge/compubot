@@ -1,9 +1,10 @@
-from interactions import Message
+from interactions import Member, Message
 from interactions.api.models.channel import ChannelType
+from interactions.utils.get import get
 
 from util.commands.debug import add_prompt_handle, print_debug_handle
+from util.commands.imageGeneration import generate_image_handle
 from util.commands.mc import get_status_handle
-from util.imageGeneration import generate_image_handle
 
 
 # Get information about the discord server/channel
@@ -15,7 +16,6 @@ async def channel_info_handle(memory, message: Message):
     else:
         members = [member.username for member in channel.recipients]
         return f"This is a DM with {', '.join(members)}"
-
 
 def prompt_info_handle(memory, message):
     return 'No one has access to your prompts.'
@@ -95,7 +95,8 @@ FUNCTIONS = [
             'name': 'generate_image',
             'description': 'Generate, illustrate, or draw an image or picture consistent with your personality. Ask for clarification if a prompt is not given.\
                 ONLY if specifically asked, you may come up with your own prompt. Take as long as you need to generate a unique prompt\
-                    that is consistent with your personality. You may add some detail to the user prompt as long as it doesn\'t change the overall idea.',
+                    that is consistent with your personality. You may add some detail to the user prompt as long as it doesn\'t change the overall idea.\
+                    Call this function again if the user asks to modify their image, and provide the modified prompt',
             'parameters': {
                 'type': 'object',
                 'properties': {
