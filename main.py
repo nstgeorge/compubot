@@ -159,10 +159,10 @@ last_ping = 0
 @bot.event()
 async def on_presence_update(_, activity: interactions.Presence):
     if len(activity.activities) > 0:
-        print('Got presence update for {} ({})'.format(activity.user.id, activity.activities[0].name))
         if activity.user.id in PING_WHEN_PLAYING_FORTNITE \
             and FORTNITE_ID in [a.application_id for a in activity.activities] \
             and last_ping + EVERY_24_HOURS > time.time():
+            print('Got presence update for {} ({})'.format(activity.user.id, activity.activities[0].name))
             last_ping = time.time()
             response = await oneOffResponse("<@{}> just started up Fortnite. Roast them mercilessly and say their name.".format(activity.user.id))
             channel = await get(bot, interactions.Channel, object_id=CHANNEL_TO_PING)
