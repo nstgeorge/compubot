@@ -15,8 +15,9 @@ load_dotenv() # Needs to be here for OpenAI
 from interactions.ext.tasks import IntervalTrigger, create_task
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
-from util.chatGPT import oneOffResponse, respondWithChatGPT
+from util.chatGPT import respondWithChatGPT
 from util.gptMemory import memory
+from util.listeners.gameRoast import roast_for_bad_game
 
 # !!! NOTE TO SELF: Heroku logging is a pain. If you don't see a print(), add sys.stdout.flush() !!!
 
@@ -34,15 +35,6 @@ APPLICATION_IDS = {
     'test': '1088680993910702090',
     'prod': '923647717375344660'
 }
-
-FORTNITE_ID = '432980957394370572'
-
-PING_WHEN_PLAYING_FORTNITE = [
-    '344471073368178698',  # Jackson
-    '234927911562510336'  # Colin
-]
-
-CHANNEL_TO_PING = '717977225168683090'  # rushmobies
 
 EVERY_24_HOURS = 60 * 60 * 24
 
@@ -128,6 +120,9 @@ async def gptHandleMessage(message: interactions.Message):
 
 # Event handlers
 
+@bot.event()
+async def on_presence_update(_, activity: interactions.Presence):
+    await roast_for_bad_game(bot, activity)
 
 @bot.event()
 async def on_message_create(message: interactions.Message):
@@ -149,26 +144,6 @@ async def on_message_create(message: interactions.Message):
 
     if message.content and 'cock' in message.content.lower():
         await message.create_reaction('YEP:1088687844148641902')
-
-# Check for Fortnite
-last_ping = 0
-
-@bot.event()
-async def on_presence_update(_, activity: interactions.Presence):
-    global last_ping
-    if len(activity.activities) > 0:
-        print('{}: (lp {} current time {}, is ping target: {}) is playing fnte: {} ({})'.format(activity.user.id, last_ping, time.time(), activity.user.id in PING_WHEN_PLAYING_FORTNITE, FORTNITE_ID in [str(a.application_id) for a in activity.activities], ','.join([str(a.application_id) or "" for a in activity.activities])))
-        if str(activity.user.id) in PING_WHEN_PLAYING_FORTNITE \
-            and FORTNITE_ID in [a.application_id for a in activity.activities] \
-            and last_ping + EVERY_24_HOURS < time.time():
-                print('Got presence update for {} ({})'.format(activity.user.username, activity.activities[0].name))
-                last_ping = time.time()
-                # Re-generate responses until it includes the user's tag. Should happen within 1-2 responses anyway
-                response = ""
-                while '<@{}>'.format(activity.user.id) not in response:
-                    response = await oneOffResponse("<@{}> just started up Fortnite. Roast them mercilessly and say their name.".format(activity.user.id))
-                channel = await get(bot, interactions.Channel, object_id=CHANNEL_TO_PING)
-                await channel.send(response)
 # GPT commands
 
 @bot.command(
