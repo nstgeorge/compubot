@@ -156,7 +156,7 @@ last_ping = 0
 @bot.event()
 async def on_presence_update(_, activity: interactions.Presence):
     global last_ping
-    print('{}: (lp {}) is playing fnte: {}'.format(activity.user.username, last_ping, FORTNITE_ID in [a.application_id for a in activity.activities]))
+    print('{}: (lp {}, is ping target: {}) is playing fnte: {} ({})'.format(activity.user.username, last_ping, activity.user.id in PING_WHEN_PLAYING_FORTNITE, FORTNITE_ID in [a.application_id for a in activity.activities], ','.join([a.application_id for a in activity.activities])))
     if len(activity.activities) > 0:
         if activity.user.id in PING_WHEN_PLAYING_FORTNITE \
             and FORTNITE_ID in [a.application_id for a in activity.activities] \
