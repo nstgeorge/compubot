@@ -157,7 +157,7 @@ last_ping = 0
 async def on_presence_update(_, activity: interactions.Presence):
     global last_ping
     if len(activity.activities) > 0:
-        print('{}: (lp {}, is ping target: {}) is playing fnte: {} ({})'.format(activity.user.username, last_ping, activity.user.id in PING_WHEN_PLAYING_FORTNITE, FORTNITE_ID in [a.application_id for a in activity.activities], ','.join([a.application_id for a in activity.activities])))
+        print('{}: (lp {}, is ping target: {}) is playing fnte: {} ({})'.format(activity.user.username, last_ping, activity.user.id in PING_WHEN_PLAYING_FORTNITE, FORTNITE_ID in [a.application_id for a in activity.activities], ','.join([a.application_id or "" for a in activity.activities])))
         if activity.user.id in PING_WHEN_PLAYING_FORTNITE \
             and FORTNITE_ID in [a.application_id for a in activity.activities] \
             and last_ping + EVERY_24_HOURS > time.time():
