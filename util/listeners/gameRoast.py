@@ -31,10 +31,10 @@ async def roast_for_bad_game(bot: interactions.Client, activity: interactions.Pr
     if len(matches) > 0 and str(activity.user.id) in PING_WHEN_PLAYING:
       matchID = matches[0]
       user_meta = PING_WHEN_PLAYING[str(activity.user.id)]
-      print('{}: (lp {} current time {}, is ping target: {}) is playing {}'.format(activity.user.id, user_meta.last_ping, time.time(), activity.user.id in PING_WHEN_PLAYING, str(matchID)))
-      if user_meta.last_ping + AVOID_SPAM_COOLDOWN < time.time():
+      print('{}: (lp {} current time {}, is ping target: {}) is playing {}'.format(activity.user.id, user_meta['last_ping'], time.time(), activity.user.id in PING_WHEN_PLAYING, str(matchID)))
+      if user_meta['last_ping'] + AVOID_SPAM_COOLDOWN < time.time():
         print('Got roastable presence update for {} ({})'.format(activity.user.id, activity.activities[0].name))
-        user_meta.last_ping = time.time()
+        user_meta['last_ping'] = time.time()
         # Re-generate responses until it includes the user's tag. Should happen within 1-2 responses anyway
         response = ""
         while '<@{}>'.format(activity.user.id) not in response:
