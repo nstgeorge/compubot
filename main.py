@@ -16,7 +16,7 @@ from interactions.ext.tasks import IntervalTrigger, create_task
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from util.chatGPT import oneOffResponse, respondWithChatGPT
-from util.gptMemory import GPTMemory
+from util.gptMemory import memory
 
 # !!! NOTE TO SELF: Heroku logging is a pain. If you don't see a print(), add sys.stdout.flush() !!!
 
@@ -111,9 +111,6 @@ async def on_start():
 
 # compubot ChatGPT
 
-memory = GPTMemory()
-
-
 def sleep_log(msg):
     print('ChatGPT call failed! Retrying...')
 
@@ -158,6 +155,7 @@ last_ping = 0
 
 @bot.event()
 async def on_presence_update(_, activity: interactions.Presence):
+    global last_ping
     if len(activity.activities) > 0:
         if activity.user.id in PING_WHEN_PLAYING_FORTNITE \
             and FORTNITE_ID in [a.application_id for a in activity.activities] \

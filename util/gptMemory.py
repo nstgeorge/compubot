@@ -37,7 +37,6 @@ prompts_tokens = sum(
 
 # Manages conversations across Discord channels.
 
-
 class GPTMemory():
     def __init__(self):
         self.conversations = {}
@@ -120,3 +119,5 @@ class GPTMemory():
 
     def clear(self, channel_id: Snowflake):
         self.conversations.pop(channel_id)
+
+memory = GPTMemory()
