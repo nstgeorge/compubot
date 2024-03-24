@@ -157,15 +157,18 @@ last_ping = 0
 async def on_presence_update(_, activity: interactions.Presence):
     global last_ping
     if len(activity.activities) > 0:
-        print('{}: (lp {}, is ping target: {}) is playing fnte: {} ({})'.format(activity.user.username, last_ping, activity.user.id in PING_WHEN_PLAYING_FORTNITE, FORTNITE_ID in [str(a.application_id) for a in activity.activities], ','.join([str(a.application_id) or "" for a in activity.activities])))
-        if activity.user.id in PING_WHEN_PLAYING_FORTNITE \
-            and FORTNITE_ID in [str(a.application_id) for a in activity.activities] \
-            and last_ping + EVERY_24_HOURS > time.time():
-            print('Got presence update for {} ({})'.format(activity.user.username, activity.activities[0].name))
-            last_ping = time.time()
-            response = await oneOffResponse("<@{}> just started up Fortnite. Roast them mercilessly and say their name.".format(activity.user.id))
-            channel = await get(bot, interactions.Channel, object_id=CHANNEL_TO_PING)
-            await channel.send(response)
+        print('{}: (lp {} current time {}, is ping target: {}) is playing fnte: {} ({})'.format(activity.user.id, last_ping, time.time(), activity.user.id in PING_WHEN_PLAYING_FORTNITE, FORTNITE_ID in [str(a.application_id) for a in activity.activities], ','.join([str(a.application_id) or "" for a in activity.activities])))
+        if str(activity.user.id) in PING_WHEN_PLAYING_FORTNITE \
+            and FORTNITE_ID in [a.application_id for a in activity.activities] \
+            and last_ping + EVERY_24_HOURS < time.time():
+                print('Got presence update for {} ({})'.format(activity.user.username, activity.activities[0].name))
+                last_ping = time.time()
+                # Re-generate responses until it includes the user's tag. Should happen within 1-2 responses anyway
+                response = ""
+                while '<@{}>'.format(activity.user.id) not in response:
+                    response = await oneOffResponse("<@{}> just started up Fortnite. Roast them mercilessly and say their name.".format(activity.user.id))
+                channel = await get(bot, interactions.Channel, object_id=CHANNEL_TO_PING)
+                await channel.send(response)
 # GPT commands
 
 @bot.command(
