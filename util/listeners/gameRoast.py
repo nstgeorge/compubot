@@ -5,7 +5,7 @@ from interactions.utils.get import get
 
 from util.chatGPT import oneOffResponse
 
-AVOID_SPAM_COOLDOWN = 60 * 60 * 24
+AVOID_SPAM_COOLDOWN = 60 * 60 * 2
 
 GAME_IDS = {
   '432980957394370572': 'Fortnite',
@@ -13,27 +13,28 @@ GAME_IDS = {
   '356869127241072640': 'League of Legends'
 }
 
-FORTNITE_ID = '432980957394370572'
-
-PING_WHEN_PLAYING = [
-  '344471073368178698',  # Jackson
-  '234927911562510336'  # Colin
-]
+PING_WHEN_PLAYING = {
+  '344471073368178698': {
+    'last_ping': 0
+  },  # Jackson
+  '234927911562510336': {
+    'last_ping': 0
+  }  # Colin
+}
 
 CHANNEL_TO_PING = '717977225168683090'  # rushmobies
-last_ping = 0
 
 
 async def roast_for_bad_game(bot: interactions.Client, activity: interactions.Presence):
-  global last_ping
   if len(activity.activities) > 0:
     matches = list(set(GAME_IDS) & set([a.application_id for a in activity.activities]))
-    if len(matches) > 0:
+    if len(matches) > 0 and str(activity.user.id) in PING_WHEN_PLAYING:
       matchID = matches[0]
-      print('{}: (lp {} current time {}, is ping target: {}) is playing {}'.format(activity.user.id, last_ping, time.time(), activity.user.id in PING_WHEN_PLAYING, str(matchID)))
-      if str(activity.user.id) in PING_WHEN_PLAYING  and last_ping + AVOID_SPAM_COOLDOWN < time.time():
+      user_meta = PING_WHEN_PLAYING[str(activity.user.id)]
+      print('{}: (lp {} current time {}, is ping target: {}) is playing {}'.format(activity.user.id, user_meta.last_ping, time.time(), activity.user.id in PING_WHEN_PLAYING, str(matchID)))
+      if user_meta.last_ping + AVOID_SPAM_COOLDOWN < time.time():
         print('Got roastable presence update for {} ({})'.format(activity.user.id, activity.activities[0].name))
-        last_ping = time.time()
+        user_meta.last_ping = time.time()
         # Re-generate responses until it includes the user's tag. Should happen within 1-2 responses anyway
         response = ""
         while '<@{}>'.format(activity.user.id) not in response:
