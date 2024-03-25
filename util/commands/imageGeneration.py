@@ -56,9 +56,9 @@ class ImageGeneration(interactions.Extension):
         # Manually append a prompt request to this history
         messages.append({
            'role': 'system',
-           'content': 'Given the prompt "{}", provide a prompt to generate an image with DALLE-3 that makes sense given the chat history. \
-            Add as much detail as you like. If there is no chat history, simply repeat the prompt back to me. \
-            Remember that this is a DALLE-3 prompt, and should be descriptive, non-conversational, and match closely with the user-provided prompt.'
+           'content': 'Given the prompt "{}", provide a prompt to generate an image with DALL-E 3 that makes sense given the chat history. \
+            Add as much detail as you like. If there is no chat history, simply repeat the prompt as given by the user. \
+            Remember that this is a DALL-E 3 prompt, and should be descriptive, non-conversational, and match closely with the user-provided prompt.'
         })
 
         response = await client.chat.completions.create(
