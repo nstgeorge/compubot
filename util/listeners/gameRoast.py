@@ -5,7 +5,7 @@ from interactions.utils.get import get
 
 from util.chatGPT import oneOffResponse
 
-AVOID_SPAM_COOLDOWN = 60 * 60 * 2
+AVOID_SPAM_COOLDOWN = 60 * 60 * 12
 
 GAME_IDS = {
   '432980957394370572': 'Fortnite',
@@ -23,7 +23,7 @@ PING_WHEN_PLAYING = {
   }  # Colin
 }
 
-CHANNEL_TO_PING = '717977225168683090'  # rushmobies
+CHANNEL_TO_PING = '1086455598784188496'  # talk-to-compubot
 
 
 async def roast_for_bad_game(bot: interactions.Client, activity: interactions.Presence):
