@@ -15,9 +15,9 @@ load_dotenv() # Needs to be here for OpenAI
 from interactions.ext.tasks import IntervalTrigger, create_task
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
-from util.chatGPT import respondWithChatGPT
-from util.gptMemory import memory
-from util.listeners.gameRoast import roast_for_bad_game
+from src.chatGPT import respondWithChatGPT
+from src.gptMemory import memory
+from src.listeners.gameRoast import roast_for_bad_game
 
 # !!! NOTE TO SELF: Heroku logging is a pain. If you don't see a print(), add sys.stdout.flush() !!!
 
