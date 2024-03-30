@@ -43,7 +43,7 @@ async def generate_image_handle(memory, message: interactions.Message, prompt):
         ),
         description=prompt
     )
-    title = await __oneOffResponse("Given the prompt \"{}\", state a concise title as if this image were in an art gallery.")
+    title = await __oneOffResponse("Given the prompt \"{}\", state a concise title as if this image were in an art gallery.".format(prompt))
     await resp.edit('_{}_ - <@{}>, {}'.format(title.title(), message.author.id, datetime.now().year), embeds=embed)
     return AI_RESPONSE_STRING.format(prompt)
   except BadRequestError as e:
