@@ -4,9 +4,9 @@ import json
 import interactions
 from openai import AsyncOpenAI, OpenAIError
 
-from util.functionDefinitions import FUNCTION_CALLS, FUNCTIONS
-from util.gptMemory import DEFAULT_MODEL, MODEL_PROMPTS, GPTMemory
-from util.replyFilters import cleanReply, stripQuotations, stripSelfTag
+from src.functionDefinitions import FUNCTION_CALLS, FUNCTIONS
+from src.gptMemory import DEFAULT_MODEL, MODEL_PROMPTS, GPTMemory
+from src.replyFilters import cleanReply, stripQuotations, stripSelfTag
 
 client = AsyncOpenAI()
 

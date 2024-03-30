@@ -3,7 +3,7 @@ import time
 import interactions
 from interactions.utils.get import get
 
-from util.chatGPT import oneOffResponse
+from src.chatGPT import oneOffResponse
 
 AVOID_SPAM_COOLDOWN = 60 * 60 * 12
 
@@ -34,7 +34,7 @@ async def roast_for_bad_game(bot: interactions.Client, activity: interactions.Pr
       user_meta = PING_WHEN_PLAYING[str(activity.user.id)]
       if user_meta['last_ping'] + AVOID_SPAM_COOLDOWN < time.time():
         print('Got roastable presence update for {} ({})'.format(activity.user.id, activity.activities[0].name))
-        user_meta['last_ping'] = time.time()
+        PING_WHEN_PLAYING[str(activity.user.id)]['last_ping'] = time.time()
         # Re-generate responses until it includes the user's tag. Should happen within 1-2 responses anyway
         response = ""
         while '<@{}>'.format(activity.user.id) not in response:

@@ -2,7 +2,7 @@ import json
 
 import interactions
 
-from util.gptMemory import GPTMemory
+from src.gptMemory import GPTMemory
 
 MY_ID = '186691115720769536'
 

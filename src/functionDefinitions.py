@@ -2,9 +2,9 @@ from interactions import Member, Message
 from interactions.api.models.channel import ChannelType
 from interactions.utils.get import get
 
-from util.commands.debug import add_prompt_handle, print_debug_handle
-from util.commands.imageGeneration import generate_image_handle
-from util.commands.mc import get_status_handle
+from src.commands.debug import add_prompt_handle, print_debug_handle
+from src.commands.imageGeneration import generate_image_handle
+from src.commands.mc import get_status_handle
 
 
 # Get information about the discord server/channel
