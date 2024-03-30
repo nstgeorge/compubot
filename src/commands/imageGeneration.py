@@ -4,12 +4,25 @@ from datetime import datetime
 import interactions
 from openai import AsyncOpenAI, BadRequestError, OpenAIError
 
-from util.gptMemory import DEFAULT_MODEL, memory
+from src.gptMemory import DEFAULT_MODEL, MODEL_PROMPTS, memory
 
 client = AsyncOpenAI()
 LOGGER = logging.getLogger()
 
-AI_RESPONSE_STRING = "There is now a picture of {}. This image is outdated, and should be updated if the user asks to change the prompt or generate a new image."
+AI_RESPONSE_STRING = "The image can be described as such: \"{}\". This image is outdated, and compubot must create a new image if the user asks to change the prompt or generate a new image."
+
+async def __oneOffResponse(prompt, role="system"):
+    response = await client.chat.completions.create(
+        model=DEFAULT_MODEL,
+        messages=[
+            *MODEL_PROMPTS,
+            {
+                "role": role,
+                "content": prompt
+            }
+        ]
+    )
+    return response.choices[0].message.content
 
 async def generate_image(prompt):
   return await client.images.generate(
@@ -24,7 +37,14 @@ async def generate_image_handle(memory, message: interactions.Message, prompt):
   resp = await message.reply("on it...")
   try:
     image = await generate_image(prompt)
-    await resp.edit(image.data[0].url)
+    embed = interactions.Embed(
+        image=interactions.EmbedImageStruct(
+          url=image.data[0].url
+        ),
+        description=prompt
+    )
+    title = await __oneOffResponse("Given the prompt \"{}\", state a concise title as if this image were in an art gallery.")
+    await resp.edit('_{}_ - <@{}>, {}'.format(title.title(), message.author.id, datetime.now().year), embeds=embed)
     return AI_RESPONSE_STRING.format(prompt)
   except BadRequestError as e:
     return "Unable to generate that image for the following reason: {}".format(e.message)
@@ -57,8 +77,8 @@ class ImageGeneration(interactions.Extension):
         messages.append({
            'role': 'system',
            'content': 'Given the prompt "{}", provide a prompt to generate an image with DALL-E 3 that makes sense given the chat history. \
-            Add as much detail as you like. If there is no chat history, simply repeat the prompt as given by the user. \
-            Remember that this is a DALL-E 3 prompt, and should be descriptive, non-conversational, and match closely with the user-provided prompt.'
+            Add as much detail as you like. If there is no chat history, simply repeat the given prompt. \
+            Remember that this is a DALL-E 3 prompt, and should be descriptive, non-conversational, and match closely with the user-provided prompt.'.format(prompt)
         })
 
         response = await client.chat.completions.create(

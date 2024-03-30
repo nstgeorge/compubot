@@ -6,7 +6,7 @@ import sys
 import interactions
 from riotwatcher import ApiError, LolWatcher
 
-from util.TrackerGG import TrackerGG
+from src.TrackerGG import TrackerGG
 
 LOGGER = logging.getLogger()
 

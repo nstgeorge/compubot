@@ -15,9 +15,9 @@ load_dotenv() # Needs to be here for OpenAI
 from interactions.ext.tasks import IntervalTrigger, create_task
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
-from util.chatGPT import respondWithChatGPT
-from util.gptMemory import memory
-from util.listeners.gameRoast import roast_for_bad_game
+from src.chatGPT import respondWithChatGPT
+from src.gptMemory import memory
+from src.listeners.gameRoast import roast_for_bad_game
 
 # !!! NOTE TO SELF: Heroku logging is a pain. If you don't see a print(), add sys.stdout.flush() !!!
 
@@ -63,16 +63,16 @@ client = AsyncOpenAI()
 
 bot = interactions.Client(token=TOKEN, intents=Intents.DEFAULT | Intents.GUILD_MESSAGE_CONTENT | Intents.GUILD_PRESENCES | Intents.GUILD_MEMBERS)
 
-bot.load('util.commands.ip')
-bot.load('util.commands.kill')
-bot.load('util.commands.locate')
-bot.load('util.commands.mc')
-bot.load('util.commands.mock')
-bot.load('util.commands.quote')
-bot.load('util.commands.when')
-bot.load('util.commands.sentiment')
-bot.load('util.commands.stats')
-bot.load('util.commands.imageGeneration')
+bot.load('src.commands.ip')
+bot.load('src.commands.kill')
+bot.load('src.commands.locate')
+bot.load('src.commands.mc')
+bot.load('src.commands.mock')
+bot.load('src.commands.quote')
+bot.load('src.commands.when')
+bot.load('src.commands.sentiment')
+bot.load('src.commands.stats')
+bot.load('src.commands.imageGeneration')
 
 
 @create_task(IntervalTrigger(EVERY_24_HOURS))
