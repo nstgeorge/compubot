@@ -11,7 +11,12 @@ GAME_IDS = {
   '432980957394370572': 'Fortnite',
   '356876590342340608': 'Rainbow Six Siege',
   '356869127241072640': 'League of Legends',
-  '356877880938070016': 'Rocket League'
+  '356877880938070016': 'Rocket League',
+  '357607478105604096': 'War Thunder',
+  '1205090671527071784': 'Helldivers',
+  '1116835216464543946': 'Phasmophobia',
+  '363445589247131668': 'Roblox',
+  '1158877933042143272': 'Counter-Strike 2'
 }
 
 PING_WHEN_PLAYING = {
@@ -20,7 +25,16 @@ PING_WHEN_PLAYING = {
   },  # Jackson
   '234927911562510336': {
     'last_ping': 0
-  }  # Colin
+  },  # Colin
+  '151856792224268288': {
+    'last_ping': 0
+  }, # Kobe
+  '238465524550467585': {
+    'last_ping': 0
+  }, # Jacob
+  '186691115720769536': {
+    'last_ping': 0
+  } # Me
 }
 
 CHANNEL_TO_PING = '1086455598784188496'  # talk-to-compubot
