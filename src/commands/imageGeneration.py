@@ -9,7 +9,7 @@ from src.gptMemory import DEFAULT_MODEL, MODEL_PROMPTS, memory
 client = AsyncOpenAI()
 LOGGER = logging.getLogger()
 
-AI_RESPONSE_STRING = "The image can be described as such: \"{}\". This image is outdated, and compubot must create a new image if the user asks to change the prompt or generate a new image."
+AI_RESPONSE_STRING = "The image can be described as such: \"{}\". This image is outdated, and compubot must create a new image if the user asks to change the prompt or generate a new image. Continue the conversation."
 
 async def __oneOffResponse(prompt, role="system"):
     response = await client.chat.completions.create(
