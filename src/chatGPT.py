@@ -43,7 +43,6 @@ async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, m
         function_calls['invoke_gpt_4'] = invokeGPT4
 
     channel = await message.get_channel()
-    print(client.base_url)
     async with channel.typing:
         try:
             response = await client.chat.completions.create(

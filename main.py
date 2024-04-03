@@ -118,7 +118,6 @@ async def gptHandleMessage(message: interactions.Message):
     if not shouldGoToMistral:
         shouldGoToMistral = await respondWithChatGPT(memory=memory, message=message)
     if shouldGoToMistral:
-        print('Went to mistral')
         await respondWithMistral(memory=memory, message=message)
 
 

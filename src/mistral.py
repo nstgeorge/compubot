@@ -32,8 +32,6 @@ def sleep_log(msg):
 async def respondWithMistral(memory: GPTMemory, message: interactions.Message):
 	channel = await message.get_channel()
 
-	print(client.base_url)
-
 	async with channel.typing:
 		response = await client.chat.completions.create(
 				model=MODEL,
