@@ -5,7 +5,7 @@ import requests
 from openai import AsyncOpenAI
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
-from src.gptMemory import GPTMemory
+from src.gptMemory import MODEL_PROMPT, GPTMemory
 from src.replyFilters import cleanReply, stripQuotations, stripSelfTag
 
 API_URL = "https://api.fireworks.ai/inference/v1/"
@@ -34,8 +34,25 @@ async def respondWithMistral(memory: GPTMemory, message: interactions.Message):
 
 	async with channel.typing:
 		response = await client.chat.completions.create(
-				model=MODEL,
-				messages=memory.get_messages(message.channel_id)
+			model=MODEL,
+			messages=memory.get_messages(message.channel_id)
 		)
 
 		await message.reply(extract_and_save_response(response, memory, message.channel_id))
+
+async def oneOffResponseMistral(prompt, role="system"):
+	print(prompt)
+	response = await client.chat.completions.create(
+		model=MODEL,
+		messages=[
+			MODEL_PROMPT,
+			{
+				"role": role,
+				"content": prompt
+			}
+		]
+	)
+	reply = response.choices[0].message.content
+	for filter in reply_cleanup:
+		reply = filter(reply)
+	return reply
