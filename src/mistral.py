@@ -9,7 +9,7 @@ from src.gptMemory import MODEL_PROMPT, GPTMemory
 from src.replyFilters import cleanReply, stripQuotations, stripSelfTag
 
 API_URL = "https://api.fireworks.ai/inference/v1/"
-MODEL = "accounts/fireworks/models/mixtral-8x7b-instruct"
+MODEL = "accounts/fireworks/models/mistral-7b-instruct-v0p2"
 
 reply_cleanup = [cleanReply, stripSelfTag, stripQuotations]
 
