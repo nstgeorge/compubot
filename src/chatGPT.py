@@ -2,13 +2,17 @@ import inspect
 import json
 
 import interactions
-from openai import AsyncOpenAI, OpenAIError
+from openai import AsyncOpenAI, BadRequestError, OpenAIError
+from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from src.functionDefinitions import FUNCTION_CALLS, FUNCTIONS
-from src.gptMemory import DEFAULT_MODEL, MODEL_PROMPTS, GPTMemory
+from src.gptMemory import DEFAULT_MODEL, MODEL_PROMPT, GPTMemory
 from src.replyFilters import cleanReply, stripQuotations, stripSelfTag
 
 client = AsyncOpenAI()
+
+def sleep_log(msg):
+    print('ChatGPT call failed! Retrying...')
 
 async def invokeGPT4(memory: GPTMemory, message: interactions.Message):
   try:
@@ -17,6 +21,7 @@ async def invokeGPT4(memory: GPTMemory, message: interactions.Message):
   except OpenAIError:
     return False
 
+@retry(wait=wait_random_exponential(min=1, max=5), stop=stop_after_attempt(3), reraise=True, before_sleep=sleep_log)
 async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, model=DEFAULT_MODEL):
     NO_POST_RESPONSE_FLAG = False
 
@@ -38,12 +43,17 @@ async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, m
         function_calls['invoke_gpt_4'] = invokeGPT4
 
     channel = await message.get_channel()
+    print(client.base_url)
     async with channel.typing:
-        response = await client.chat.completions.create(
-            model=model,
-            messages=memory.get_messages(message.channel_id),
-            tools=functions
-        )
+        try:
+            response = await client.chat.completions.create(
+                model=model,
+                messages=memory.get_messages(message.channel_id),
+                tools=functions
+            )
+        except BadRequestError as e:
+            print(e)
+            return True
 
         resp = response.choices[0].message
 
@@ -97,7 +107,7 @@ async def oneOffResponse(prompt, role="system"):
     response = await client.chat.completions.create(
         model=DEFAULT_MODEL,
         messages=[
-            *MODEL_PROMPTS,
+            MODEL_PROMPT,
             {
                 "role": role,
                 "content": prompt

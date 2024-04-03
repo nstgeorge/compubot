@@ -18,6 +18,8 @@ from tenacity import retry, stop_after_attempt, wait_random_exponential
 from src.chatGPT import respondWithChatGPT
 from src.gptMemory import memory
 from src.listeners.gameRoast import roast_for_bad_game
+from src.mistral import respondWithMistral
+from src.moderation import flagged_by_moderation
 
 # !!! NOTE TO SELF: Heroku logging is a pain. If you don't see a print(), add sys.stdout.flush() !!!
 
@@ -73,6 +75,7 @@ bot.load('src.commands.when')
 bot.load('src.commands.sentiment')
 bot.load('src.commands.stats')
 bot.load('src.commands.imageGeneration')
+bot.load('src.commands.offensiveMode')
 
 
 @create_task(IntervalTrigger(EVERY_24_HOURS))
@@ -103,19 +106,20 @@ async def on_start():
 
 # compubot ChatGPT
 
-def sleep_log(msg):
-    print('ChatGPT call failed! Retrying...')
-
-
-@retry(wait=wait_random_exponential(min=1, max=5), stop=stop_after_attempt(3), reraise=True, before_sleep=sleep_log)
 async def gptHandleMessage(message: interactions.Message):
     clean_content = message.content.replace(
         '<@{}>'.format(APPLICATION_IDS[ENVTYPE]), 'compubot')
 
     memory.append(message.channel_id, '{}: """{}"""'.format(
         message.author.username, clean_content))
-    
-    await respondWithChatGPT(memory=memory, message=message)
+
+    shouldGoToMistral = flagged_by_moderation(clean_content) or memory.is_offensive(message.channel_id)
+    # Try ChatGPT, then skip to mistral if it fails anyway
+    if not shouldGoToMistral:
+        shouldGoToMistral = await respondWithChatGPT(memory=memory, message=message)
+    if shouldGoToMistral:
+        print('Went to mistral')
+        await respondWithMistral(memory=memory, message=message)
 
 
 # Event handlers

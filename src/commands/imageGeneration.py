@@ -4,7 +4,7 @@ from datetime import datetime
 import interactions
 from openai import AsyncOpenAI, BadRequestError, OpenAIError
 
-from src.gptMemory import DEFAULT_MODEL, MODEL_PROMPTS, memory
+from src.gptMemory import DEFAULT_MODEL, MODEL_PROMPT, memory
 
 client = AsyncOpenAI()
 LOGGER = logging.getLogger()
@@ -15,7 +15,7 @@ async def __oneOffResponse(prompt, role="system"):
     response = await client.chat.completions.create(
         model=DEFAULT_MODEL,
         messages=[
-            *MODEL_PROMPTS,
+            MODEL_PROMPT,
             {
                 "role": role,
                 "content": prompt
