@@ -53,45 +53,6 @@ FUNCTIONS = [
     {
         "type": "function",
         "function": {
-            'name': 'debug',
-            'description': 'Prints compubot chat history debug info in the console',
-            'parameters': {
-                'type': 'object',
-                'properties': {}
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            'name': 'prompt_info',
-            'description': 'Gets the prompt (or beginning of the conversation) provided to compubot',
-            'parameters': {
-                'type': 'object',
-                'properties': {}
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            'name': 'add_prompt',
-            'description': 'Adds a prompt to compubot for this conversation, only available to computron',
-            'parameters': {
-                'type': 'object',
-                'properties': {
-                    'prompt': {
-                        'type': 'string',
-                        'description': 'The prompt to add to compubot. Ask the user for clarification before submitting if no prompt is clear.'
-                    },
-                },
-                'required': ['prompt']
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
             'name': 'generate_image',
             'description': 'Generate, illustrate, or draw an image or picture consistent with your personality. Ask for clarification if a prompt is not given.\
                 ONLY if specifically asked, you may come up with your own prompt. Take as long as you need to generate a unique prompt\
@@ -114,8 +75,5 @@ FUNCTIONS = [
 FUNCTION_CALLS = {
     'minecraft_server': get_status_handle,
     'channel_info': channel_info_handle,
-    'debug': print_debug_handle,
-    'prompt_info': prompt_info_handle,
-    'add_prompt': add_prompt_handle,
     'generate_image': generate_image_handle
 }

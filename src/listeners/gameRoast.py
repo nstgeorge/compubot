@@ -3,6 +3,7 @@ import time
 import interactions
 from interactions.utils.get import get
 
+from src.gptMemory import memory
 from src.mistral import oneOffResponseMistral
 
 AVOID_SPAM_COOLDOWN = 60 * 60 * 12
@@ -16,8 +17,7 @@ GAME_IDS = {
   '1205090671527071784': 'Helldivers',
   '1116835216464543946': 'Phasmophobia',
   '363445589247131668': 'Roblox',
-  '1158877933042143272': 'Counter-Strike 2',
-  None: 'VSCode'
+  '1158877933042143272': 'Counter-Strike 2'
 }
 
 PING_WHEN_PLAYING = {
@@ -38,8 +38,8 @@ PING_WHEN_PLAYING = {
   } # Me
 }
 
-# CHANNEL_TO_PING = '1086455598784188496'  # talk-to-compubot
-CHANNEL_TO_PING = '923800790148202509'
+CHANNEL_TO_PING = '1086455598784188496'  # talk-to-compubot
+# CHANNEL_TO_PING = '923800790148202509'
 
 async def roast_for_bad_game(bot: interactions.Client, activity: interactions.Presence):
   if len(activity.activities) > 0:
@@ -57,7 +57,8 @@ async def roast_for_bad_game(bot: interactions.Client, activity: interactions.Pr
           attempt = 1
           response = ""
           while '<@{}>'.format(activity.user.id) not in response and attempt <= max_retries:
-            response = await oneOffResponseMistral("<@{}> just started up {}. Roast them mercilessly and say their name.".format(activity.user.id, GAME_IDS[matchID]), role="user")
+            response = await oneOffResponseMistral("<@{}> is now playing {}. Roast them mercilessly. Say their name in the message.".format(activity.user.id, GAME_IDS[matchID]), role="user")
             print(response)
             attempt += 1
+          memory.append(CHANNEL_TO_PING, response, role="assistant")
           await channel.send(response)
