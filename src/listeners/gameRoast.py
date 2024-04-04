@@ -3,6 +3,7 @@ import time
 import interactions
 from interactions.utils.get import get
 
+from src.gptMemory import memory
 from src.mistral import oneOffResponseMistral
 
 AVOID_SPAM_COOLDOWN = 60 * 60 * 12
@@ -55,7 +56,8 @@ async def roast_for_bad_game(bot: interactions.Client, activity: interactions.Pr
           attempt = 1
           response = ""
           while '<@{}>'.format(activity.user.id) not in response and attempt <= max_retries:
-            response = await oneOffResponseMistral("<@{}> just started up {}. Roast them mercilessly and say their name.".format(activity.user.id, GAME_IDS[matchID]), role="user")
+            response = await oneOffResponseMistral("<@{}> is now playing {}. Roast them mercilessly. Say their name in the message.".format(activity.user.id, GAME_IDS[matchID]), role="user")
             print(response)
             attempt += 1
+          memory.append(CHANNEL_TO_PING, response, role="assistant")
           await channel.send(response)
