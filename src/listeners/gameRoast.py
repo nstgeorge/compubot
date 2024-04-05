@@ -1,3 +1,4 @@
+import random
 import time
 
 import interactions
@@ -6,7 +7,11 @@ from interactions.utils.get import get
 from src.gptMemory import memory
 from src.mistral import oneOffResponseMistral
 
-AVOID_SPAM_COOLDOWN = 60 * 60 * 12
+BASE_ROAST_PROBABILITY = 25 # out of 100
+DAYS_TO_100_PROBABILITY = 7 # timescale to increase roast probability by
+
+SECS_PER_DAY = 60 * 60 * 24
+AVOID_SPAM_COOLDOWN = SECS_PER_DAY / 2
 
 GAME_IDS = {
   '432980957394370572': 'Fortnite',
@@ -46,18 +51,20 @@ async def roast_for_bad_game(bot: interactions.Client, activity: interactions.Pr
     if len(matches) > 0 and str(activity.user.id) in PING_WHEN_PLAYING:
       matchID = matches[0]
       user_meta = PING_WHEN_PLAYING[str(activity.user.id)]
-      if user_meta['last_ping'] + AVOID_SPAM_COOLDOWN < time.time():
-        channel = await get(bot, interactions.Channel, object_id=CHANNEL_TO_PING)
-        async with channel.typing:
-          print('Got roastable presence update for {} ({})'.format(activity.user.id, activity.activities[0].name))
-          PING_WHEN_PLAYING[str(activity.user.id)]['last_ping'] = time.time()
-          # Re-generate responses until it includes the user's tag. Should happen within 1-2 responses anyway
-          max_retries = 5
-          attempt = 1
-          response = ""
-          while '<@{}>'.format(activity.user.id) not in response and attempt <= max_retries:
-            response = await oneOffResponseMistral("<@{}> is now playing {}. Roast them mercilessly. Say their name in the message.".format(activity.user.id, GAME_IDS[matchID]), role="user")
-            print(response)
-            attempt += 1
-          memory.append(CHANNEL_TO_PING, response, role="assistant")
-          await channel.send(response)
+      # Check spam cooldown and roast probability
+      if user_meta['last_ping'] + AVOID_SPAM_COOLDOWN < time.time() \
+        and random.randrange(0, 100) <= (BASE_ROAST_PROBABILITY + ((time.time() - user_meta['last_ping']) / (SECS_PER_DAY * DAYS_TO_100_PROBABILITY)) * (100 - BASE_ROAST_PROBABILITY)):
+          channel = await get(bot, interactions.Channel, object_id=CHANNEL_TO_PING)
+          async with channel.typing:
+            print('Got roastable presence update for {} ({})'.format(activity.user.id, activity.activities[0].name))
+            PING_WHEN_PLAYING[str(activity.user.id)]['last_ping'] = time.time()
+            # Re-generate responses until it includes the user's tag. Should happen within 1-2 responses anyway
+            max_retries = 5
+            attempt = 1
+            response = ""
+            while '<@{}>'.format(activity.user.id) not in response and attempt <= max_retries:
+              response = await oneOffResponseMistral("<@{}> is now playing {}. Roast them mercilessly and creatively. Say their name in the message.".format(activity.user.id, GAME_IDS[matchID]), role="user")
+              print(response)
+              attempt += 1
+            memory.append(CHANNEL_TO_PING, response, role="assistant")
+            await channel.send(response)

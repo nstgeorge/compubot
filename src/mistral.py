@@ -48,8 +48,6 @@ async def respondWithMistral(memory: GPTMemory, message: interactions.Message):
 			messages=memory.get_messages(message.channel_id)
 		)
 
-		print(response.choices[0].message.model_dump_json(indent=4))
-
 		# Hit the functions and generate a new response
 		if response.choices[0].message.tool_calls:
 			for call in response.choices[0].message.tool_calls:

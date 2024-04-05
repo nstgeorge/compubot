@@ -20,6 +20,7 @@ from src.gptMemory import memory
 from src.listeners.gameRoast import roast_for_bad_game
 from src.mistral import respondWithMistral
 from src.moderation import flagged_by_moderation
+from src.utils.describeImage import describe_image
 
 # !!! NOTE TO SELF: Heroku logging is a pain. If you don't see a print(), add sys.stdout.flush() !!!
 
@@ -107,6 +108,16 @@ async def on_start():
 # compubot ChatGPT
 
 async def gptHandleMessage(message: interactions.Message):
+    # Check for images
+    if len(message.embeds) > 0 or len(message.attachments) > 0:
+        image_links = [
+            *[embed.url or embed.image.url for embed in message.embeds],
+            *[attach.url for attach in message.attachments]
+        ]
+        for url in image_links:
+            img_desc = await describe_image(url)
+            memory.append(message.channel_id, "{} has uploaded an image: {}".format(message.author.username, img_desc), role="system")
+
     clean_content = message.content.replace(
         '<@{}>'.format(APPLICATION_IDS[ENVTYPE]), 'compubot')
 
