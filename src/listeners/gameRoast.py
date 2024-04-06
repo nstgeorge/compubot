@@ -22,8 +22,7 @@ GAME_IDS = {
   '1205090671527071784': 'Helldivers',
   '1116835216464543946': 'Phasmophobia',
   '363445589247131668': 'Roblox',
-  '1158877933042143272': 'Counter-Strike 2',
-  None: 'VSCode'
+  '1158877933042143272': 'Counter-Strike 2'
 }
 
 PING_WHEN_PLAYING = {
@@ -45,7 +44,6 @@ PING_WHEN_PLAYING = {
 }
 
 CHANNEL_TO_PING = '1086455598784188496'  # talk-to-compubot
-CHANNEL_TO_PING = '923800790148202509'
 
 def roast_probability(user_meta):
   return (
