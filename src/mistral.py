@@ -74,7 +74,7 @@ async def oneOffResponseMistral(prompt, role="system"):
 		top_p=1,
 		presence_penalty=0,
 		frequency_penalty=0.5,
-		temperature=0.8,
+		temperature=0.3,
 		messages=[
 			MODEL_PROMPT,
 			{
