@@ -136,7 +136,7 @@ async def gptHandleMessage(message: interactions.Message):
 
 @bot.event()
 async def on_presence_update(_, activity: interactions.Presence):
-    await roast_for_bad_game(bot, activity)
+    # await roast_for_bad_game(bot, activity)
 
 @bot.event()
 async def on_message_create(message: interactions.Message):
