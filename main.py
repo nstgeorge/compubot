@@ -120,7 +120,7 @@ async def gptHandleMessage(message: interactions.Message):
                 img_desc = await describe_image(url)
                 memory.append(message.channel_id, "{} has uploaded an image: {}".format(message.author.username, img_desc), role="system")
             except BadRequestError:
-                return "The user uploaded an image that is too large (5MB max)."
+                memory.append(message.channel_id, "{} uploaded an image that is too large (5MB max).".format(message.author.username), role="system")
 
     clean_content = message.content.replace(
         '<@{}>'.format(APPLICATION_IDS[ENVTYPE]), 'compubot')
