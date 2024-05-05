@@ -8,7 +8,6 @@ MODEL = "accounts/fireworks/models/firellava-13b"
 client = AsyncOpenAI(base_url=API_URL, api_key=os.getenv("FIREWORKS_API_KEY"))
 
 async def describe_image(url: str):
-  try:
     response = await client.chat.completions.create(
         model=MODEL,
         max_tokens=512,
@@ -38,5 +37,3 @@ async def describe_image(url: str):
     print("Image description: {}".format(response.choices[0].message.content))
     
     return response.choices[0].message.content
-  except BadRequestError:
-    return "The image is too large (5MB max)."

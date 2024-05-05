@@ -9,7 +9,8 @@ import interactions
 from dotenv import load_dotenv
 from interactions import Intents
 from interactions.utils.get import get
-from openai import APITimeoutError, AsyncOpenAI, RateLimitError
+from openai import (APITimeoutError, AsyncOpenAI, BadRequestError,
+                    RateLimitError)
 
 load_dotenv() # Needs to be here for OpenAI
 from interactions.ext.tasks import IntervalTrigger, create_task
@@ -115,8 +116,11 @@ async def gptHandleMessage(message: interactions.Message):
             *[attach.url for attach in message.attachments]
         ]
         for url in image_links:
-            img_desc = await describe_image(url)
-            memory.append(message.channel_id, "{} has uploaded an image: {}".format(message.author.username, img_desc), role="system")
+            try:
+                img_desc = await describe_image(url)
+                memory.append(message.channel_id, "{} has uploaded an image: {}".format(message.author.username, img_desc), role="system")
+            except BadRequestError:
+                return "The user uploaded an image that is too large (5MB max)."
 
     clean_content = message.content.replace(
         '<@{}>'.format(APPLICATION_IDS[ENVTYPE]), 'compubot')
