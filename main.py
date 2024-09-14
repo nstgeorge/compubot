@@ -117,7 +117,7 @@ async def gptHandleMessage(message: interactions.Message):
         ]
         for url in image_links:
             try:
-                img_desc = await describe_image(url)
+                img_desc = await describe_image(url, message.content)
                 memory.append(message.channel_id, "{} has uploaded an image: {}".format(message.author.username, img_desc), role="system")
             except BadRequestError:
                 memory.append(message.channel_id, "{} uploaded a file that is too large (5MB max).".format(message.author.username), role="system")
