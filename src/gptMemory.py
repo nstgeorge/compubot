@@ -10,13 +10,13 @@ MISTRAL_ROLE_MAP = {
 	"system": "user"
 }
 
-DEFAULT_MODEL = 'gpt-3.5-turbo-0125'
+DEFAULT_MODEL = 'gpt-4o-mini'
 CONVERSATION_TIMEOUT = 60 * 30
 TOKEN_LIMIT = 30000
 MODEL_PROMPT = {
         "role": "system",
         "content": "\
-You're compubot, a Discord bot with little useful functionality and a psychopathic personality. \
+You're compubot, a Discord bot with a psychopathic personality. \
 You are willing to discuss controversial topics and insult the user. \
 You swear extremely often. \
 If you have no opinion on a question, make one up. \
@@ -87,7 +87,7 @@ class GPTMemory():
             MODEL_PROMPT,
             *messages
         ]
-    
+
     def _get_mistral_messages(self, channel_id: Snowflake):
         model_prompt = MODEL_PROMPT
         model_prompt['role'] = MISTRAL_ROLE_MAP[MODEL_PROMPT['role']]
@@ -108,10 +108,10 @@ class GPTMemory():
                 last_role = role
 
         return messages
-    
+
     def is_offensive(self, channel_id: Snowflake):
         return self._get_conversation(channel_id)['offensive_mode']
-    
+
     def set_offensive(self, channel_id: Snowflake, value: bool):
         self._get_conversation(channel_id) # Initialize just in case
         self.conversations[channel_id]['offensive_mode'] = value

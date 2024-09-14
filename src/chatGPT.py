@@ -28,20 +28,6 @@ async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, m
     functions = FUNCTIONS[:]
     function_calls = FUNCTION_CALLS.copy()
 
-    if model == DEFAULT_MODEL:
-        functions.append({
-            "type": "function",
-            "function": {
-                'name': 'invoke_gpt_4',
-                'description': 'If a user asks about a technical task or the answer to a complex question, you can use this function to provide a better answer.',
-                'parameters': {
-                    'type': 'object',
-                    'properties':  {}
-                }
-            }
-        })
-        function_calls['invoke_gpt_4'] = invokeGPT4
-
     channel = await message.get_channel()
     async with channel.typing:
         try:
