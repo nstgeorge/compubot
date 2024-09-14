@@ -39,17 +39,12 @@ async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, i
                         'text': messages[-1]['content']
                     }]
 
-                print("NEXT ATTEMPT ==========================================")
-                print("MESSAGE CONTENT BEFORE ADDING IMAGES:")
-                print(messages[-1]['content'])
-
                 messages[-1]['content'].extend({
                     "type": "image_url",
                     "image_url": {
                     "url": url
                     }
                 } for url in image_links)
-            print(messages)
             response = await client.chat.completions.create(
                 model=model,
                 messages=messages,
