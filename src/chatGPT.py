@@ -22,7 +22,7 @@ async def invokeGPT4(memory: GPTMemory, message: interactions.Message):
     return False
 
 @retry(wait=wait_random_exponential(min=1, max=5), stop=stop_after_attempt(3), reraise=True, before_sleep=sleep_log)
-async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, model=DEFAULT_MODEL):
+async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, image_links: list[str], model=DEFAULT_MODEL):
     NO_POST_RESPONSE_FLAG = False
 
     functions = FUNCTIONS[:]
@@ -31,9 +31,28 @@ async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, m
     channel = await message.get_channel()
     async with channel.typing:
         try:
+            messages = memory.get_messages(message.channel_id)
+            if (len(image_links) > 0):
+                if isinstance(messages[-1]['content'], str):
+                    messages[-1]['content'] = [{
+                        'type': 'text',
+                        'text': messages[-1]['content']
+                    }]
+
+                print("NEXT ATTEMPT ==========================================")
+                print("MESSAGE CONTENT BEFORE ADDING IMAGES:")
+                print(messages[-1]['content'])
+
+                messages[-1]['content'].extend({
+                    "type": "image_url",
+                    "image_url": {
+                    "url": url
+                    }
+                } for url in image_links)
+            print(messages)
             response = await client.chat.completions.create(
                 model=model,
-                messages=memory.get_messages(message.channel_id),
+                messages=messages,
                 tools=functions
             )
         except BadRequestError as e:

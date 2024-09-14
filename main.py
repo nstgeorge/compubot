@@ -110,17 +110,20 @@ async def on_start():
 
 async def gptHandleMessage(message: interactions.Message):
     # Check for images
+    image_links = []
     if len(message.embeds) > 0 or len(message.attachments) > 0:
         image_links = [
             *[embed.url or embed.image.url for embed in message.embeds],
             *[attach.url for attach in message.attachments]
         ]
-        for url in image_links:
-            try:
-                img_desc = await describe_image(url, message.content)
-                memory.append(message.channel_id, "{} has uploaded an image: {}".format(message.author.username, img_desc), role="system")
-            except BadRequestError:
-                memory.append(message.channel_id, "{} uploaded a file that is too large (5MB max).".format(message.author.username), role="system")
+        print(image_links)
+        # for url in image_links:
+        #     try:
+        #         img_desc = await describe_image(url, message.content)
+        #         print(img_desc)
+        #         memory.append(message.channel_id, "{} has uploaded an image: {}".format(message.author.username, img_desc), role="system")
+        #     except BadRequestError:
+        #         memory.append(message.channel_id, "{} uploaded a file that is too large (5MB max).".format(message.author.username), role="system")
 
     clean_content = message.content.replace(
         '<@{}>'.format(APPLICATION_IDS[ENVTYPE]), 'compubot')
@@ -131,8 +134,10 @@ async def gptHandleMessage(message: interactions.Message):
     shouldGoToMistral = flagged_by_moderation(clean_content) or memory.is_offensive(message.channel_id)
     # Try ChatGPT, then skip to mistral if it fails anyway
     if not shouldGoToMistral:
-        shouldGoToMistral = await respondWithChatGPT(memory=memory, message=message)
+        print("NON-MISTRAL CALL")
+        shouldGoToMistral = await respondWithChatGPT(memory=memory, message=message, image_links=image_links)
     if shouldGoToMistral:
+        print("MISTRAL CALL")
         await respondWithMistral(memory=memory, message=message)
 
 
