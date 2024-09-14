@@ -16,7 +16,7 @@ def sleep_log(msg):
 
 async def invokeGPT4(memory: GPTMemory, message: interactions.Message):
   try:
-    await respondWithChatGPT(memory, message, "gpt-4-0125-preview")
+    await respondWithChatGPT(memory, message, "gpt-4o-mini")
     return True
   except OpenAIError:
     return False
@@ -66,16 +66,16 @@ async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, m
             else:
                 function_response = tool_to_call(
                     memory=memory, message=message, **tool_args)
-            
+
             if tool_name == 'invoke_gpt_4' and function_response:
                 NO_POST_RESPONSE_FLAG = True
-                
+
             print(f"{tool_name} response: {function_response}")
 
             if not tool_name == 'invoke_gpt_4':
                 memory.append(
                     message.channel_id,
-                    function_response, 
+                    function_response,
                     role='function',
                     name=tool_name,
                     tool_call_id=resp.tool_calls[0].id
