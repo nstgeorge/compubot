@@ -13,7 +13,7 @@ from src.replyFilters import cleanReply, stripQuotations, stripSelfTag
 
 API_URL = "https://api.fireworks.ai/inference/v1/"
 # MODEL = "accounts/fireworks/models/mistral-7b-instruct-v0p2"
-MODEL = "accounts/fireworks/models/hermes-2-pro-mistral-7b"
+MODEL = "accounts/fireworks/models/mixtral-8x7b-instruct"
 # MODEL = "accounts/fireworks/models/firefunction-v1"
 reply_cleanup = [cleanReply, stripSelfTag, stripQuotations]
 
@@ -98,7 +98,7 @@ async def handle_tool_call(call, memory, message):
 	else:
 			function_response = tool_to_call(
 					memory=memory, message=message, **tool_args)
-			
+
 	print(f"{tool_name} response: {function_response}")
 
 	return function_response
