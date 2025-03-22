@@ -98,5 +98,21 @@
   {
     "type": 2,
     "name": "whale sounds pitched down 2 octaves"
+  },
+  {
+    "type": 3,
+    "name": "society crumbling"
+  },
+  {
+    "type": 3,
+    "name": "the end of the world"
+  },
+  {
+    "type": 2,
+    "name": "sounds of anguish ASMR on YouTube"
+  },
+  {
+    "type": 0,
+    "name": "mind games"
   }
 ]

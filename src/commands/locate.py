@@ -2,49 +2,39 @@ import json
 import logging
 import os
 
-import interactions
 import requests
+from interactions import (Client, Extension, OptionType, SlashContext,
+                          slash_command, slash_option)
 
-KILL_PHRASES = json.load(open("resources/kill_strings.json"))
-KILL_PHRASES_VS_ADMIN = json.load(
-    open("resources/kill_strings_against_admin.json"))
 SETTINGS = json.load(open("resources/settings.json"))
 LOGGER = logging.getLogger()
-M3O_TOKEN = os.getenv('M3O_TOKEN')
+IP_GEOLOCATION_KEY = os.getenv('IP_GEOLOCATION_KEY')
 
 
 def gen_google_maps_url(x, y):
     return "https://www.google.com/maps/search/?api=1&query={},{}".format(x, y)
 
 
-class Locate(interactions.Extension):
-    def __init__(self, client: interactions.Client):
+class Locate(Extension):
+    def __init__(self, client: Client):
         LOGGER.debug("Initialized /locate shard")
         self.client = client
 
-    @interactions.extension_command(
+    @slash_command(
         name="locate",
-        description="geolocate an IP address (THIS IS REAL, NOT A JOKE)",
-        options=[
-            interactions.Option(
-                name="ip",
-                description="ip to locate",
-                required=True,
-                type=interactions.OptionType.STRING
-            )
-        ]
+        description="geolocate an IP address (THIS IS REAL, NOT A JOKE)"
     )
-    async def locate(self, ctx: interactions.CommandContext, ip: str):
-        msg = await ctx.send('Locating...')
-        headers = {
-            'Authorization': 'Bearer {}'.format(M3O_TOKEN)
-        }
-        data = {
-            'ip': ip
-        }
+    @slash_option(
+        name="ip",
+        description="ip to locate",
+        required=True,
+        opt_type=OptionType.STRING
+    )
+    async def locate(self, ctx: SlashContext, ip: str):
+        await ctx.defer()
 
-        response = requests.post(
-            "https://api.m3o.com/v1/ip/Lookup", json=data, headers=headers)
+        response = requests.get(
+            "https://api.ipgeolocation.io/ipgeo?apiKey={}&ip={}".format(IP_GEOLOCATION_KEY, ip))
         response_data = response.json()
 
         if response.ok:
@@ -52,9 +42,9 @@ class Locate(interactions.Extension):
                 response_data['latitude'],
                 response_data['longitude']
             )
-            await msg.edit('{} is registered in {}, {}. Here\'s the map: {}'.format(ip, response_data['city'], response_data['country'], g_map))
+            await ctx.send('{} is registered in {}, {}. Here\'s the map: {}'.format(ip, response_data['city'], response_data['country_name'], g_map))
         else:
-            await msg.edit('Couldn\'t locate {}. Maybe try again and be better this time?'.format(ip))
+            await ctx.send('Couldn\'t locate {}. Maybe try again and be better this time?'.format(ip))
 
         LOGGER.debug("locate: {} tried to locate {}".format(ctx.author.id, ip))
 

@@ -1,21 +1,18 @@
-import json
-import logging
-
-import interactions
+from interactions import Client, Extension, SlashContext, slash_command
 
 from src.gptMemory import memory
 
 
-class OffensiveMode(interactions.Extension):
-    def __init__(self, client: interactions.Client):
+class OffensiveMode(Extension):
+    def __init__(self, client: Client):
         self.client = client
 
-    @interactions.extension_command(
+    @slash_command(
         name="offensive",
         description="let's get nasty",
         options=[]
     )
-    async def when(self, ctx: interactions.CommandContext):
+    async def when(self, ctx: SlashContext):
       memory.set_offensive(ctx.channel_id, not memory.is_offensive(ctx.channel_id))
       is_offensive = memory.is_offensive(ctx.channel_id)
       if is_offensive:

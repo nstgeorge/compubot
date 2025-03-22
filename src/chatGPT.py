@@ -1,54 +1,100 @@
 import inspect
 import json
+from typing import Any, Dict, List, Literal, Optional, TypedDict, cast
 
-import interactions
+from interactions import Client, DMChannel, Message, Snowflake
 from openai import AsyncOpenAI, BadRequestError, OpenAIError
+from openai.types.chat import (ChatCompletionAssistantMessageParam,
+                               ChatCompletionMessageParam,
+                               ChatCompletionSystemMessageParam,
+                               ChatCompletionToolMessageParam,
+                               ChatCompletionUserMessageParam)
+from openai.types.chat.completion_create_params import ChatCompletionToolParam
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from src.functionDefinitions import FUNCTION_CALLS, FUNCTIONS
 from src.gptMemory import DEFAULT_MODEL, MODEL_PROMPT, GPTMemory
 from src.replyFilters import cleanReply, stripQuotations, stripSelfTag
 
+
+class FunctionDef(TypedDict):
+    name: str
+    description: str
+    parameters: Dict[str, Any]
+
+class Tool(TypedDict):
+    type: Literal["function"]
+    function: FunctionDef
+
 client = AsyncOpenAI()
 
 def sleep_log(msg):
     print('ChatGPT call failed! Retrying...')
 
-async def invokeGPT4(memory: GPTMemory, message: interactions.Message):
-  try:
-    await respondWithChatGPT(memory, message, "gpt-4o-mini")
-    return True
-  except OpenAIError:
-    return False
+async def invokeGPT4(memory: GPTMemory, message: Message):
+    try:
+        await respondWithChatGPT(memory, message, [], "gpt-4o-mini")
+        return True
+    except OpenAIError:
+        return False
+
+def convert_to_openai_message(msg: Dict[str, Any]) -> ChatCompletionMessageParam:
+    role = msg.get("role", "user")
+    content = msg.get("content", "")
+    name = msg.get("name")
+    tool_call_id = msg.get("tool_call_id")
+    
+    base_msg = {"role": role, "content": content}
+    if name:
+        base_msg["name"] = name
+    if tool_call_id:
+        base_msg["tool_call_id"] = tool_call_id
+        
+    if role == "system":
+        return ChatCompletionSystemMessageParam(**base_msg)
+    elif role == "user":
+        return ChatCompletionUserMessageParam(**base_msg)
+    elif role == "assistant":
+        return ChatCompletionAssistantMessageParam(**base_msg)
+    elif role == "tool":
+        return ChatCompletionToolMessageParam(**base_msg)
+    else:
+        return ChatCompletionUserMessageParam(**base_msg)
+
+def convert_to_tool(func_def: Dict[str, Any]) -> ChatCompletionToolParam:
+    return cast(ChatCompletionToolParam, func_def)
 
 @retry(wait=wait_random_exponential(min=1, max=5), stop=stop_after_attempt(3), reraise=True, before_sleep=sleep_log)
-async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, image_links: list[str], model=DEFAULT_MODEL):
+async def respondWithChatGPT(memory: GPTMemory, message: Message, image_links: list[str], model=DEFAULT_MODEL):
     NO_POST_RESPONSE_FLAG = False
 
     functions = FUNCTIONS[:]
     function_calls = FUNCTION_CALLS.copy()
 
-    channel = await message.get_channel()
+    channel = message.channel
     async with channel.typing:
         try:
-            messages = memory.get_messages(message.channel_id)
+            messages = memory.get_messages(Snowflake(message.channel.id))
             if (len(image_links) > 0):
                 if isinstance(messages[-1]['content'], str):
                     messages[-1]['content'] = [{
                         'type': 'text',
                         'text': messages[-1]['content']
                     }]
+                elif messages[-1]['content'] is None:
+                    messages[-1]['content'] = []
 
-                messages[-1]['content'].extend({
+                messages[-1]['content'].extend([{
                     "type": "image_url",
                     "image_url": {
-                    "url": url
+                        "url": url
                     }
-                } for url in image_links)
+                } for url in image_links])
+
             response = await client.chat.completions.create(
                 model=model,
-                messages=messages,
-                tools=functions
+                messages=[convert_to_openai_message(msg) for msg in messages],
+                tools=[convert_to_tool(f) for f in functions]
             )
         except BadRequestError as e:
             print(e)
@@ -74,7 +120,7 @@ async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, i
 
             if not tool_name == 'invoke_gpt_4':
                 memory.append(
-                    message.channel_id,
+                    Snowflake(message.channel.id),
                     function_response,
                     role='function',
                     name=tool_name,
@@ -83,8 +129,8 @@ async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, i
 
                 response = await client.chat.completions.create(
                     model=model,
-                    messages=memory.get_messages(message.channel_id),
-                    tools=functions,
+                    messages=[convert_to_openai_message(msg) for msg in memory.get_messages(Snowflake(message.channel.id))],
+                    tools=[convert_to_tool(f) for f in functions],
                     tool_choice="none"
                 )
 
@@ -95,9 +141,9 @@ async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, i
                 reply = filter(reply)
 
             # Save this to the current conversation
-            memory.append(message.channel_id, reply, role='assistant')
+            memory.append(Snowflake(message.channel.id), reply, role='assistant')
 
-            if channel.type == interactions.ChannelType.DM:
+            if isinstance(channel, DMChannel):
                 await channel.send(reply)
             else:
                 await message.reply(reply)
@@ -106,11 +152,11 @@ async def oneOffResponse(prompt, role="system"):
     response = await client.chat.completions.create(
         model=DEFAULT_MODEL,
         messages=[
-            MODEL_PROMPT,
-            {
+            convert_to_openai_message(MODEL_PROMPT),
+            convert_to_openai_message({
                 "role": role,
                 "content": prompt
-            }
+            })
         ]
     )
     return response.choices[0].message.content

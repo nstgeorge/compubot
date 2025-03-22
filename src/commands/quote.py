@@ -3,8 +3,9 @@ import logging
 import os
 from pathlib import Path
 
-import interactions
 from dotenv import load_dotenv
+from interactions import (Client, CommandType, ContextMenuContext, Extension,
+                          GuildText, Message, context_menu, listen)
 
 load_dotenv()
 
@@ -13,38 +14,47 @@ SETTINGS = json.load(open("resources/settings.json"))
 LOGGER = logging.getLogger()
 
 
-class Quote(interactions.Extension):
-    def __init__(self, client: interactions.Client):
+class Quote(Extension):
+    def __init__(self, client: Client):
         LOGGER.debug("Initialized /quote shard")
         self.client = client
 
-    def __get_output_channel(self, ctx: interactions.CommandContext):
+    def __get_output_channel(self, ctx: ContextMenuContext):
         if ENVTYPE == "dev" and ctx.author.id in SETTINGS["global"]["admin_ids"]:
             return SETTINGS["quote"]["dev_output_channel_id"]
         else:
             return SETTINGS["quote"]["output_channel_id"]
 
-    def __message_string(self, message: interactions.Message):
-        if message.content == "":
+    def __message_string(self, message: Message):
+        if not message.content:
             return " - <@{}>, {}".format(message.author.id, message.timestamp)
 
         return "> {}\n - <@{}>, {}".format(message.content.replace("\n", "\n> "),
                                            message.author.id,
                                            message.timestamp)
 
-    @interactions.extension_message_command(name="Quote")
-    async def quote_cmd(self, ctx: interactions.CommandContext):
-        channel = ctx.guild.get_channel(self.__get_output_channel(ctx))
-        message = await ctx.channel.get_message(ctx.target_id)
-        for attach in message.attachments:
-            await channel.send(attach.url)
-        await channel.send(self.__message_string(message))
-        await ctx.send(SETTINGS["quote"]["success_message"])
-        LOGGER.debug("quote: Sent quote {}".format(message.id))
+    @context_menu(name="Quote", context_type=CommandType.MESSAGE)
+    async def quote_cmd(self, ctx: ContextMenuContext):
+        channel = await self.client.fetch_channel(self.__get_output_channel(ctx))
+        if not isinstance(channel, GuildText):
+            await ctx.respond("Error: Output channel must be a text channel")
+            return
+        
+        if isinstance(ctx.target, Message):
+            message = await ctx.target.fetch_referenced_message()
+            if not message:
+                await ctx.respond("Error: Could not fetch message")
+                return
 
-    @quote_cmd.error
-    async def command_error(self, e, *args, **kwargs):
-        LOGGER.error("quote: Quote command error: {}".format(e))
+            for attach in message.attachments:
+                await channel.send(attach.url)
+            await channel.send(self.__message_string(message))
+            await ctx.respond(SETTINGS["quote"]["success_message"])
+            LOGGER.debug("quote: Sent quote {}".format(message.id))
+
+    @listen()
+    async def on_command_error(self, event):
+        LOGGER.error("quote: Quote command error: {}".format(event.error))
 
 
 def setup(bot):

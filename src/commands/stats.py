@@ -2,87 +2,90 @@ import json
 import logging
 import os
 import sys
+from typing import Any, Dict, List, Optional, cast
 
 import interactions
+from interactions import (Client, Extension, OptionType, SlashContext,
+                          slash_command, slash_option, subcommand)
 from riotwatcher import ApiError, LolWatcher
 
 from src.TrackerGG import TrackerGG
 
 LOGGER = logging.getLogger()
 
-REGION = os.getenv('RIOT_REGION')
-RIOT_LEAGUE_KEY = os.getenv('RIOT_LEAGUE_KEY')
-TRACKER_GG_KEY = os.getenv('TRACKER_GG_KEY')
+REGION = os.getenv('RIOT_REGION') or ""
+RIOT_LEAGUE_KEY = os.getenv('RIOT_LEAGUE_KEY') or ""
+TRACKER_GG_KEY = os.getenv('TRACKER_GG_KEY') or ""
+
+if not all([REGION, RIOT_LEAGUE_KEY, TRACKER_GG_KEY]):
+    raise ValueError("Missing required environment variables")
 
 
-class Stats(interactions.Extension):
-    def __init__(self, client: interactions.Client):
+class Stats(Extension):
+    def __init__(self, client: Client):
         LOGGER.debug("Initialized /rank shard")
         self.client = client
         self.lol_watcher = LolWatcher(RIOT_LEAGUE_KEY, default_status_v4=True)
         self.tracker_gg = TrackerGG(TRACKER_GG_KEY)
 
-    @interactions.extension_command(
-        name="stats"
+    @slash_command(
+        name="stats",
+        description="Get player stats for various games"
     )
-    async def stats(self, ctx: interactions.CommandContext):
+    async def stats(self, ctx: SlashContext):
         pass
 
-    @stats.subcommand(
+    @subcommand(
+        base="stats",
         name='league',
-        description='get someone\'s league rank (cringe)',
-        options=[
-            interactions.Option(
-                name="summoner",
-                description="summoner name to check",
-                required=True,
-                type=interactions.OptionType.STRING
-            )
-        ]
+        description='get someone\'s league rank (cringe)'
     )
-    async def league(self, ctx: interactions.CommandContext, summoner: str):
-        channel = await ctx.get_channel()
-        async with channel.typing:
-            try:
-                summoner_data = self.lol_watcher.summoner.by_name(
-                    REGION, summoner)
-                rank_data = self.lol_watcher.league.by_summoner(
-                    REGION, summoner_data['id'])
-                if (len(rank_data) == 0):
-                    await ctx.send('{} is not ranked this season.'.format(summoner))
-                    return
-                rank_data = rank_data[0]
-                await ctx.send('{} is {} {} ({} wins, {} losses).'.format(summoner, rank_data['tier'], rank_data['rank'], rank_data['wins'], rank_data['losses']))
-            except ApiError:
-                print('No data found for {}'.format(summoner))
-                await ctx.send('I couldn\'t find a summoner named {}.'.format(summoner))
-            sys.stdout.flush()
+    @slash_option(
+        name="summoner",
+        description="summoner name to check",
+        required=True,
+        opt_type=OptionType.STRING
+    )
+    async def league(self, ctx: SlashContext, summoner: str):
+        await ctx.defer()
+        try:
+            summoner_data = cast(Dict[str, Any], self.lol_watcher.summoner.by_name(
+                REGION, summoner))
+            rank_data = cast(List[Dict[str, Any]], self.lol_watcher.league.by_summoner(
+                REGION, summoner_data['id']))
+            if not rank_data:
+                await ctx.send('{} is not ranked this season.'.format(summoner))
+                return
+            rank_data = rank_data[0]
+            await ctx.send('{} is {} {} ({} wins, {} losses).'.format(summoner, rank_data['tier'], rank_data['rank'], rank_data['wins'], rank_data['losses']))
+        except ApiError:
+            print('No data found for {}'.format(summoner))
+            await ctx.send('I couldn\'t find a summoner named {}.'.format(summoner))
+        sys.stdout.flush()
 
-    @stats.subcommand(
+    @subcommand(
+        base="stats",
         name='csgo',
-        description='get someone\'s CS:GO stats',
-        options=[
-            interactions.Option(
-                name="username",
-                description="Steam ID/username",
-                required=True,
-                type=interactions.OptionType.STRING
-            )
-        ]
+        description='get someone\'s CS:GO stats'
     )
-    async def csgo(self, ctx: interactions.CommandContext, username: str):
-        channel = await ctx.get_channel()
-        async with channel.typing:
-            try:
-                stats = self.tracker_gg.get_player_stats(username)['data']
-                if stats:
-                    await ctx.send(self._format_csgo_stats_string(username, stats))
-                    return
-                else:
-                    await ctx.send('Could not get stats for {}.'.format(username))
-                    return
-            except Exception as e:
-                await ctx.send(e.args[0])
+    @slash_option(
+        name="username",
+        description="Steam ID/username",
+        required=True,
+        opt_type=OptionType.STRING
+    )
+    async def csgo(self, ctx: SlashContext, username: str):
+        await ctx.defer()
+        try:
+            stats = self.tracker_gg.get_player_stats(username)['data']
+            if stats:
+                await ctx.send(self._format_csgo_stats_string(username, stats))
+                return
+            else:
+                await ctx.send('Could not get stats for {}.'.format(username))
+                return
+        except Exception as e:
+            await ctx.send(e.args[0])
 
     def _format_csgo_stats_string(self, username, stats):
         main_segment = next(

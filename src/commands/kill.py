@@ -2,7 +2,8 @@ import json
 import logging
 import random
 
-import interactions
+from interactions import (Client, Extension, Member, OptionType, SlashContext,
+                          slash_command, slash_option)
 
 KILL_PHRASES = json.load(open("resources/kill_strings.json"))
 KILL_PHRASES_VS_ADMIN = json.load(
@@ -11,24 +12,22 @@ SETTINGS = json.load(open("resources/settings.json"))
 LOGGER = logging.getLogger()
 
 
-class Kill(interactions.Extension):
-    def __init__(self, client: interactions.Client):
+class Kill(Extension):
+    def __init__(self, client: Client):
         LOGGER.debug("Initialized /kill shard")
         self.client = client
 
-    @interactions.extension_command(
+    @slash_command(
         name="kill",
-        description="ruthlessly murder your friends",
-        options=[
-            interactions.Option(
-                name="user",
-                description="tag who you want dead",
-                required=True,
-                type=interactions.OptionType.MENTIONABLE
-            )
-        ]
+        description="ruthlessly murder your friends"
     )
-    async def kill(self, ctx: interactions.CommandContext, user: interactions.AllowedMentionType.USERS):
+    @slash_option(
+        name="user",
+        description="tag who you want dead",
+        required=True,
+        opt_type=OptionType.MENTIONABLE
+    )
+    async def kill(self, ctx: SlashContext, user: Member):
         if user.id in SETTINGS["global"]["admin_ids"]:
             await ctx.send(
                 random.choice(KILL_PHRASES_VS_ADMIN)

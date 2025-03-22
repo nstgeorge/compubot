@@ -1,7 +1,8 @@
 import json
 import logging
 
-import interactions
+from interactions import (Client, Extension, OptionType, SlashContext,
+                          slash_command, slash_option)
 from mcstatus import JavaServer
 
 SETTINGS = json.load(open("resources/settings.json"))
@@ -37,14 +38,19 @@ def get_status(ip: str):
     except TimeoutError:
         return 'The server isn\'t accepting queries, but it\'s online!'
 
-    if status.players.sample or hasattr(query, 'names'):
+    player_names = []
+    if query and hasattr(query, 'players') and hasattr(query.players, 'names'):
+        player_names = query.players.names
+    elif status.players.sample:
+        player_names = [p.name for p in status.players.sample]
+
+    if player_names:
         return (
             '{} has {}/{} players online. Here\'s who is on: \n{}'.format(
                 ip,
                 status.players.online,
                 status.players.max,
-                ', '.join(query.players.names or [
-                    p.name for p in status.players.sample])
+                ', '.join(player_names)
             )
         )
     else:
@@ -57,29 +63,25 @@ def get_status(ip: str):
         )
 
 
-class Minecraft(interactions.Extension):
-    def __init__(self, client: interactions.Client):
+class Minecraft(Extension):
+    def __init__(self, client: Client):
         LOGGER.debug("Initialized /mc shard")
         self.client = client
 
-    @interactions.extension_command(
+    @slash_command(
         name="mc",
-        description="check the status of a minecraft server",
-        options=[
-            interactions.Option(
-                name="ip",
-                description="ip or hostname of the server",
-                required=True,
-                type=interactions.OptionType.STRING
-            )
-        ]
+        description="check the status of a minecraft server"
     )
-    async def mc_status(self, ctx: interactions.CommandContext, ip: str):
-        msg = await ctx.send('Just a second...')
+    @slash_option(
+        name="ip",
+        description="ip or hostname of the server",
+        required=True,
+        opt_type=OptionType.STRING
+    )
+    async def mc_status(self, ctx: SlashContext, ip: str):
+        await ctx.defer()
         status_str = get_status(ip)
-
-        await msg.edit(status_str)
-
+        await ctx.send(status_str)
         LOGGER.debug(
             "mc_status: {} checked the status of {}".format(ctx.author.id, ip))
 

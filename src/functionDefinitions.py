@@ -1,21 +1,20 @@
-from interactions import Member, Message
-from interactions.api.models.channel import ChannelType
-from interactions.utils.get import get
+from interactions import ChannelType, DMChannel, Member, Message
 
-from src.commands.debug import add_prompt_handle, print_debug_handle
 from src.commands.imageGeneration import generate_image_handle
 from src.commands.mc import get_status_handle
 
 
 # Get information about the discord server/channel
 async def channel_info_handle(memory, message: Message):
-    channel = await message.get_channel()
+    channel = message.channel
     if channel.type == ChannelType.GUILD_TEXT:
-        server = await message.get_guild()
+        server = message.guild
         return f"The server name is {server.name} and the channel is {channel.name}"
-    else:
-        members = [member.username for member in channel.recipients]
+    elif channel.type == ChannelType.DM and isinstance(channel, DMChannel):
+        members = [member.display_name for member in channel.recipients]
         return f"This is a DM with {', '.join(members)}"
+    else:
+        return "This is an unsupported channel type"
 
 def prompt_info_handle(memory, message):
     return 'No one has access to your prompts.'
