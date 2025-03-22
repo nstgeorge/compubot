@@ -1,0 +1,9 @@
+build:
+  docker:
+    web: Dockerfile
+  scripts:
+    - chmod +x scripts/heroku-buildpack.sh
+    - ./scripts/heroku-buildpack.sh
+
+run:
+  web: python src/main.py 

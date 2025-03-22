@@ -1,0 +1,16 @@
+--- venv/lib/python3.10/site-packages/interactions/api/voice/opus.py
++++ venv/lib/python3.10/site-packages/interactions/api/voice/opus.py
+@@ -190,7 +190,11 @@ def load_opus() -> CDLL:
+             if not name.exists():
+                 raise RuntimeError("Could not find opus library.")
+             name = str(name)
+-        else:
++        else:
++            # Try Homebrew path first
++            homebrew_path = "/opt/homebrew/lib/libopus.0.dylib"
++            if Path(homebrew_path).exists():
++                name = homebrew_path
++            else:
+             name = ctypes.util.find_library("opus")
+ 
+         if name is None:

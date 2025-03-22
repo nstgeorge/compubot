@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+We are using a library called interactions.py, not its older cousin discord.py. Always be sure to reference only interactions.py documentation.

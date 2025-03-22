@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# [voice.py](mdc:src/commands/voice.py)
+
+- `voice_state` contains our `ActiveVoiceState`, which includes many useful tools
+- `voice_state.ws` is called VoiceGateway, which is usually how we'll interact with the Discord voice socket
+- Although Discord documentation calls it the `secret_key`, it is attached as `voice_state.ws.secret`
