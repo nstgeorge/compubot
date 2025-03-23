@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import ctypes
 import json
 import logging
 import os
@@ -18,7 +19,9 @@ import websocket
 from interactions import (ActiveVoiceState, Extension, Member, SlashContext,
                           listen, slash_command)
 from interactions.api.voice.encryption import Decryption, Encryption
-from interactions.api.voice.opus import Decoder, Encoder
+from interactions.api.voice.opus import (Decoder, Encoder, EncoderCTL,
+                                         EncoderStructurePointer, OpusConfig,
+                                         OpusError, load_opus)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or ""
 url = "wss://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview-2024-12-17"
@@ -74,7 +77,7 @@ class Voice(Extension):
         self.packet_queue: Dict[int, Dict[int, bytes]] = {}  # Queue for packets per guild, keyed by sequence
         self.last_sequence: Dict[int, int] = {}  # Last processed sequence per guild
         self.main_loop = asyncio.get_event_loop()  # Store reference to main event loop
-        self.queue_task = None  # Store reference to queue processing task
+        self.queue_tasks: Dict[int, asyncio.Task] = {}  # Store reference to queue processing tasks per guild
         self.last_timestamps = {}  # Track last timestamp per SSRC
         self.speaking_states: Dict[int, bool] = {}  # Track speaking state per guild
         self.wav_files: Dict[int, tuple[wave.Wave_write, wave.Wave_write]] = {}  # Track WAV files per guild
@@ -82,16 +85,15 @@ class Voice(Extension):
         
         # Initialize Opus decoder and encoder
         try:
-            # Initialize decoders and encoders as defaultdict
-            self.decoders: dict[str, Decoder] = defaultdict(Decoder)
-            self.encoders: dict[str, Encoder] = defaultdict(Encoder)
+            # Initialize decoders as defaultdict
+            self.decoders = defaultdict(lambda: Decoder())
+            
+            # Initialize encoders as regular dict
+            self.encoders = {}
             
             # Initialize encryption/decryption (will be configured per guild)
             self.encryptor: Dict[int, Encryption] = {}
             self.decryptor: Dict[int, Decryption] = {}
-            
-            # Start the audio processing task
-            self.start_queue_processing()
             
         except Exception as e:
             logging.error(f"Failed to initialize Opus encoder/decoder: {e}")
@@ -100,66 +102,95 @@ class Voice(Extension):
             self.encoders.clear()
             raise
 
-    def start_queue_processing(self):
-        """Start the audio queue processing task."""
+    def encode_pcm_to_opus(self, pcm_data: bytes, guild_id: int, ssrc_key: str) -> Optional[bytes]:
+        """Encode PCM data to Opus format"""
+        # Create encoder if it doesn't exist
+        if ssrc_key not in self.encoders:
+            print("[VOICE DEBUG] Creating new encoder for SSRC", ssrc_key)
+            self.encoders[ssrc_key] = Encoder()
+            print("[VOICE DEBUG] Encoder created successfully")
+        
+        # Get encoder
+        encoder = self.encoders[ssrc_key]
+        
+        # Verify input data size matches expected frame size
+        expected_size = FRAME_SIZE * CHANNELS * 2  # 2 bytes per sample = 3840 bytes
+        if len(pcm_data) != expected_size:
+            logging.error(f"PCM data size mismatch: got {len(pcm_data)} bytes, expected {expected_size}")
+            return None
+        
+        # Ensure PCM data is properly formatted (16-bit signed integers)
         try:
-            if self.queue_task is None or self.queue_task.done():
-                logging.info("Starting audio queue processing task")
-                # Create and run the task in the event loop
-                self.queue_task = asyncio.run_coroutine_threadsafe(
-                    self.process_audio_queue(),
-                    self.main_loop
-                )
-                # Verify the task started
-                if self.queue_task.done():
-                    exception = self.queue_task.exception()
-                    if exception:
-                        logging.error(f"Queue processing task failed to start: {exception}")
-                    else:
-                        logging.error("Queue processing task completed immediately")
-                else:
-                    logging.info("Audio queue processing task started successfully")
-            else:
-                logging.info("Audio queue processing task already running")
+            # Convert to numpy array for processing
+            audio_array = np.frombuffer(pcm_data, dtype=np.int16)
+            
+            # Ensure values are within valid range (-32768 to 32767)
+            audio_array = np.clip(audio_array, -32768, 32767)
+            
+            # Convert back to bytes
+            pcm_data = audio_array.tobytes()
         except Exception as e:
-            logging.error(f"Error in start_queue_processing: {e}", exc_info=True)
+            logging.error(f"Failed to process PCM data: {e}")
+            return None
+        
+        # Encode PCM to Opus
+        opus_data = encoder.encode(pcm_data)
+        if not opus_data:
+            logging.error("Failed to encode PCM data")
+            return None
+        
+        return opus_data
 
-    async def process_audio_queue(self):
-        """Process audio packets from the queue."""
-        logging.info("Audio queue processing task started")
+    async def process_discord_audio_queue(self, guild_id: int):
+        """Process audio packets from the queue and send them to Discord."""
         try:
+            logging.info(f"Starting audio queue processing task for guild {guild_id}")
             while True:
-                try:
-                    # Process queues for all guilds
-                    for guild_id, (voice_state, _) in self.voice_states.items():
-                        if guild_id in self.audio_queue:
-                            queue = self.audio_queue[guild_id]
-                            try:
-                                # Try to get data from queue without blocking
-                                pcm_data = queue.get_nowait()
-                                logging.info(f"Got {len(pcm_data)} bytes from queue for guild {guild_id}")
-                                if voice_state and voice_state.ws and voice_state.ws.socket:
-                                    try:
-                                        await self.send_audio_packet(voice_state, pcm_data)
-                                        logging.info(f"Sent audio packet to Discord for guild {guild_id}")
-                                    except Exception as e:
-                                        logging.error(f"Error sending audio packet: {e}", exc_info=True)
-                                else:
-                                    logging.error(f"Voice connection not available for guild {guild_id}")
-                                queue.task_done()
-                            except asyncio.QueueEmpty:
-                                # No data in queue, continue to next guild
-                                pass
+                if guild_id not in self.voice_states:
+                    logging.info(f"Voice state gone for guild {guild_id}, stopping queue processing")
+                    break
                     
-                    # Sleep briefly to avoid busy-waiting
-                    await asyncio.sleep(0.001)
+                voice_state = self.voice_states[guild_id][0]
+                if not voice_state or not voice_state.ws or not voice_state.ws.socket:
+                    logging.error("Voice connection not available")
+                    await asyncio.sleep(1)
+                    continue
+                
+                try:
+                    # Get data from queue with a timeout
+                    try:
+                        pcm_data = await asyncio.wait_for(
+                            self.audio_queue[guild_id].get(),
+                            timeout=0.5  # Wait up to 0.5 seconds for data
+                        )
+                        logging.debug(f"Got {len(pcm_data)} bytes from queue for guild {guild_id}")
+                    except asyncio.TimeoutError:
+                        # No data available, just continue
+                        continue
+                    
+                    # Process and send the audio data
+                    await self.send_audio_packet(voice_state, pcm_data)
+                    logging.debug(f"Sent audio packet to Discord for guild {guild_id}")
+                    
+                    # Mark task as done
+                    self.audio_queue[guild_id].task_done()
+                    
                 except Exception as e:
-                    logging.error(f"Error in audio queue processing loop: {e}", exc_info=True)
-                    await asyncio.sleep(1)  # Wait longer on error
+                    logging.error(f"Error processing audio queue: {type(e).__name__}: {str(e)}", exc_info=True)
+                    await asyncio.sleep(0.1)  # Sleep longer on error
+                    
         except Exception as e:
-            logging.error(f"Fatal error in audio queue processing task: {e}", exc_info=True)
-            # Try to restart the task
-            self.start_queue_processing()
+            logging.error(f"Fatal error in audio queue processing: {type(e).__name__}: {str(e)}", exc_info=True)
+        finally:
+            if guild_id in self.queue_tasks:
+                del self.queue_tasks[guild_id]
+            logging.info(f"Audio queue processing task stopped for guild {guild_id}")
+
+    def start_discord_audio_queue(self, guild_id: int):
+        """Start the audio queue processing task for a guild."""
+        if guild_id not in self.queue_tasks or self.queue_tasks[guild_id].done():
+            self.queue_tasks[guild_id] = asyncio.create_task(self.process_discord_audio_queue(guild_id))
+            logging.info(f"Started audio queue processing for guild {guild_id}")
 
     def decode_opus_to_pcm(self, opus_data: bytes, guild_id: int, nonce: bytes, ssrc_key: str) -> Optional[bytes]:
         """Decode Opus data to PCM format with optional decryption"""
@@ -191,39 +222,6 @@ class Voice(Extension):
             return pcm_data
         except Exception as e:
             logging.error(f"Failed to decode Opus to PCM: {e}")
-            return None
-
-    def encode_pcm_to_opus(self, pcm_data: bytes, guild_id: int, ssrc_key: str) -> Optional[bytes]:
-        """Encode PCM data to Opus format with optional encryption"""
-        if not self.encoders or not self.encoders.get(ssrc_key):
-            logging.info(f"Creating new encoder for SSRC {ssrc_key}")
-            self.encoders[ssrc_key] = Encoder()
-            
-        try:
-            # Verify input data size matches expected frame size
-            expected_size = self.encoders[ssrc_key].frame_size
-            if len(pcm_data) != expected_size:
-                logging.error(f"PCM data size mismatch: {len(pcm_data)} != {expected_size}")
-                return None
-            
-            # Encode PCM to Opus using SSRC-specific encoder
-            opus_data = self.encoders[ssrc_key].encode(pcm_data)
-            if not opus_data:
-                logging.error("Failed to encode PCM data")
-                return None
-            
-            # Encrypt if we have an encryptor for this guild
-            if guild_id in self.encryptor and self.encryptor[guild_id]:
-                try:
-                    # For xsalsa20_poly1305_lite, Discord will append the nonce
-                    opus_data = self.encryptor[guild_id].encrypt("xsalsa20_poly1305_lite", b"", opus_data)
-                except Exception as e:
-                    logging.error(f"Failed to encrypt Opus data: {e}")
-                    return None
-            
-            return opus_data
-        except Exception as e:
-            logging.error(f"Failed to encode PCM to Opus: {e}")
             return None
 
     def float_to_16bit_pcm(self, float32_array):
@@ -329,65 +327,82 @@ class Voice(Extension):
 
             # Send speaking packet only if we weren't speaking before
             if not self.speaking_states.get(guild_id, False):
-                await voice_state.ws.speaking(True)
-                self.speaking_states[guild_id] = True
-                logging.debug("Started speaking")
+                try:
+                    await voice_state.ws.speaking(True)
+                    self.speaking_states[guild_id] = True
+                    logging.debug("Started speaking")
+                except Exception as e:
+                    logging.error(f"Failed to send speaking packet: {e}")
+                    return
 
             # Process one frame at a time
-            frame_size = FRAME_SIZE  # 20ms at 48kHz
-            bytes_per_frame = frame_size * CHANNELS * 2  # 2 bytes per sample
+            frame_size = FRAME_SIZE * CHANNELS * 2  # 2 bytes per sample = 3840 bytes
+            frames = []
+            start_time = time.perf_counter()
+            loops = 0
             
-            # Check if we have enough data for at least one frame
-            if len(pcm_data) < bytes_per_frame:
-                if self.speaking_states.get(guild_id, False):
-                    await voice_state.ws.speaking(False)
-                    self.speaking_states[guild_id] = False
-                return
-            
-            # Get sequence and timestamp
-            sequence = getattr(voice_state.ws, 'sequence', 0)
-            timestamp = getattr(voice_state.ws, 'timestamp', 0)
-            
-            for i in range(0, len(pcm_data), bytes_per_frame):
-                frame = pcm_data[i:i + bytes_per_frame]
-                if len(frame) < bytes_per_frame:
-                    break  # Skip partial frame
+            # Split data into proper frame sizes
+            for i in range(0, len(pcm_data), frame_size):
+                frame = pcm_data[i:i + frame_size]
+                if len(frame) < frame_size:
+                    # Pad last frame if needed
+                    frame = frame + b'\x00' * (frame_size - len(frame))
                 
                 # Encode PCM to Opus using SSRC-specific encoder
                 encoded_data = self.encode_pcm_to_opus(frame, guild_id, ssrc_key)
                 if not encoded_data:
                     continue
                 
-                # Create RTP header
-                header = bytearray(12)  # 12 byte header
-                header[0] = 0x80  # Version
-                header[1] = 0x78  # Type (0x78 for voice)
-                header[2:4] = sequence.to_bytes(2, byteorder='big')
-                header[4:8] = timestamp.to_bytes(4, byteorder='big')
-                header[8:12] = ssrc.to_bytes(4, byteorder='big')
+                # Store frame data
+                frames.append((encoded_data, sequence))
                 
-                # Send the packet
-                packet = header + encoded_data
-                if sequence % 500 == 0:  # Log less frequently
-                    logging.info(f"Sending audio packet (sequence: {sequence})")
-                voice_state.ws.socket.send(packet)
-                
-                # Update sequence and timestamp for next packet
+                # Update sequence for next packet
                 sequence = (sequence + 1) & 0xFFFF  # Wrap at 16 bits
-                timestamp = (timestamp + frame_size) & 0xFFFFFFFF  # Wrap at 32 bits
+                voice_state.ws.timestamp = (voice_state.ws.timestamp + FRAME_SIZE) & 0xFFFFFFFF  # Wrap at 32 bits
             
-            # Update voice state sequence and timestamp
+            # Now send all frames with proper timing
+            for opus_data, seq in frames:
+                if seq % 500 == 0:  # Log less frequently
+                    logging.info(f"Sending audio packet (sequence: {seq})")
+                try:
+                    # Check if socket is still valid before sending
+                    if not voice_state.ws or not voice_state.ws.socket or voice_state.ws.socket.fileno() == -1:
+                        logging.error("Voice socket disconnected, stopping audio send")
+                        return
+                        
+                    # Use the voice gateway's send_packet method which handles packet generation and encryption
+                    voice_state.ws.send_packet(opus_data, self.encoders[ssrc_key], needs_encode=False)
+                    
+                    # Use proper timing between packets
+                    loops += 1
+                    await asyncio.sleep(max(0.0, start_time + (FRAME_LENGTH/1000 * loops) - time.perf_counter()))
+                    
+                except (OSError, ConnectionError) as e:
+                    logging.error(f"Failed to send audio packet: {e}")
+                    # Try to stop speaking if we encounter a connection error
+                    try:
+                        if self.speaking_states.get(guild_id, False):
+                            await voice_state.ws.speaking(False)
+                            self.speaking_states[guild_id] = False
+                            logging.debug("Stopped speaking due to connection error")
+                    except:
+                        pass
+                    return
+            
+            # Update voice state sequence
             voice_state.ws.sequence = sequence
-            voice_state.ws.timestamp = timestamp
             
             # Send stop speaking packet since we're done
             if self.speaking_states.get(guild_id, False):
-                await voice_state.ws.speaking(False)
-                self.speaking_states[guild_id] = False
-                logging.debug("Stopped speaking")
+                try:
+                    await voice_state.ws.speaking(False)
+                    self.speaking_states[guild_id] = False
+                    logging.debug("Stopped speaking")
+                except Exception as e:
+                    logging.error(f"Failed to send stop speaking packet: {e}")
             
         except Exception as e:
-            logging.error(f"Error sending audio packet: {e}", exc_info=True)
+            logging.error(f"Error sending audio packet: {type(e).__name__}: {str(e)}", exc_info=True)
 
     def reconnect_openai_ws(self, guild_id: int):
         """Attempt to reconnect the OpenAI WebSocket."""
@@ -644,26 +659,51 @@ class Voice(Extension):
                         logging.error(f"No voice state found for guild {guild_id}")
                         return
                         
+                    # Convert from mono 24kHz to stereo 48kHz
+                    # First convert to numpy array
+                    audio_array = np.frombuffer(pcm_data, dtype=np.int16)
+                    
                     # Resample from 24kHz to 48kHz
-                    resampled_data = resample_audio(pcm_data, OPENAI_SAMPLE_RATE, DISCORD_SAMPLE_RATE)
-                        
-                    # Initialize queue if needed
+                    ratio = DISCORD_SAMPLE_RATE / OPENAI_SAMPLE_RATE
+                    output_length = int(len(audio_array) * ratio)
+                    original_time = np.linspace(0, len(audio_array), len(audio_array))
+                    new_time = np.linspace(0, len(audio_array), output_length)
+                    resampled = np.interp(new_time, original_time, audio_array)
+                    
+                    # Convert mono to stereo by duplicating the channel
+                    stereo = np.column_stack((resampled, resampled)).flatten()
+                    
+                    # Convert back to 16-bit integers and then to bytes
+                    resampled_data = stereo.astype(np.int16).tobytes()
+                    
+                    # Write to WAV files if we're recording
+                    if guild_id in self.wav_files:
+                        original_wav, resampled_wav = self.wav_files[guild_id]
+                        original_wav.writeframes(pcm_data)
+                        resampled_wav.writeframes(resampled_data)
+                    
+                    # Ensure queue exists and queue processing task is running
                     if guild_id not in self.audio_queue:
-                        self.audio_queue[guild_id] = asyncio.Queue(maxsize=100)
+                        self.audio_queue[guild_id] = asyncio.Queue(maxsize=1000)
+                    if guild_id not in self.queue_tasks or self.queue_tasks[guild_id].done():
+                        self.start_discord_audio_queue(guild_id)
                     
-                    # Get the queue
-                    queue = self.audio_queue[guild_id]
+                    # Add to queue without waiting for result
+                    def queue_audio():
+                        try:
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                            loop.run_until_complete(self.audio_queue[guild_id].put(resampled_data))
+                            loop.close()
+                            logging.debug(f"Queued {len(resampled_data)} bytes for Discord")
+                        except Exception as e:
+                            logging.error(f"Error queueing audio data: {type(e).__name__}: {str(e)}")
                     
-                    # Try to add to queue without blocking
-                    try:
-                        queue.put_nowait(resampled_data)
-                    except asyncio.QueueFull:
-                        logging.warning(f"Audio queue full for guild {guild_id}, dropping packet")
-                    except Exception as e:
-                        logging.error(f"Error adding to queue: {e}", exc_info=True)
+                    # Run in a separate thread to avoid blocking
+                    threading.Thread(target=queue_audio, daemon=True).start()
                     
                 except Exception as e:
-                    logging.error(f"Error processing audio response: {e}", exc_info=True)
+                    logging.error(f"Error processing audio response: {type(e).__name__}: {str(e)}", exc_info=True)
             
         except Exception as e:
             logging.error("Error processing OpenAI message: %s", e)
@@ -757,6 +797,12 @@ class Voice(Extension):
                 await ctx.send("Failed to establish voice connection. Please try again.")
                 return
 
+            # Check if voice gateway is properly initialized
+            if not voice_state.ws or not hasattr(voice_state.ws, 'socket'):
+                logging.error("Voice gateway not properly initialized")
+                await ctx.send("Failed to initialize voice gateway. This might be a temporary issue.")
+                return
+
             # Create the recorder
             recorder = voice_state.create_recorder()
             voice_state.recorder = recorder  # type: ignore
@@ -765,7 +811,7 @@ class Voice(Extension):
             self.audio_queue[guild_id] = asyncio.Queue(maxsize=100)  # Limit queue size to prevent memory issues
             
             # Ensure queue processing task is running
-            self.start_queue_processing()
+            self.start_discord_audio_queue(guild_id)
             
             # Create the ready event before initializing the WebSocket
             self.ws_ready[guild_id] = threading.Event()
@@ -822,7 +868,7 @@ class Voice(Extension):
             logging.info("Successfully joined voice channel for guild %d", guild_id)
 
         except Exception as e:
-            logging.error("Failed to join voice channel: %s", e)
+            logging.error("Failed to join voice channel: %s", e, exc_info=True)
             # Clean up any partial connections/state
             if guild_id in self.voice_states:
                 del self.voice_states[guild_id]
@@ -835,7 +881,11 @@ class Voice(Extension):
             if guild_id in self.decryptor:
                 del self.decryptor[guild_id]
             
-            await ctx.send(f"Failed to join voice channel: {str(e)}")
+            error_msg = str(e)
+            if "socket is not defined" in error_msg:
+                await ctx.send("There seems to be an issue with the voice system. Please try again in a few minutes.")
+            else:
+                await ctx.send(f"Failed to join voice channel: {error_msg}")
             return
 
     @slash_command(
