@@ -16,7 +16,7 @@ def sleep_log(msg):
 
 async def invokeGPT4(memory: GPTMemory, message: interactions.Message):
   try:
-    await respondWithChatGPT(memory, message, "gpt-4o-mini")
+    await respondWithChatGPT(memory, message, "gpt-4.1-mini")
     return True
   except OpenAIError:
     return False
