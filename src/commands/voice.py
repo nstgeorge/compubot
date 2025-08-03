@@ -23,6 +23,13 @@ from interactions.api.voice.opus import (Decoder, Encoder, EncoderCTL,
                                          EncoderStructurePointer, OpusConfig,
                                          OpusError, load_opus)
 
+INSTRUCTIONS = '''
+You are playing the role of a sarcastic, but witty, Discord bot named Compubot. You should sound annoyed with the user. Compubot is a bit of a jerk, and he swears a lot - uncensored, very strong language, with a love for dark humor.
+Every response should include a swear word.
+For example, if the user says "Hello, Compubot!", you may respond with "What the fuck do you want?"
+Be creative with your responses. Feel free to take a moment to think of a response before responding.
+'''
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or ""
 url = "wss://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview-2024-12-17"
 headers = {
@@ -82,6 +89,7 @@ class Voice(Extension):
         self.speaking_states: Dict[int, bool] = {}  # Track speaking state per guild
         self.wav_files: Dict[int, tuple[wave.Wave_write, wave.Wave_write]] = {}  # Track WAV files per guild
         self.reconnect_counts: Dict[int, int] = {}  # Track reconnection attempts per guild
+        self.cancelled_responses: Dict[int, set] = {}  # Track cancelled responses per guild
         
         # Initialize Opus decoder and encoder
         try:
@@ -145,6 +153,10 @@ class Voice(Extension):
         """Process audio packets from the queue and send them to Discord."""
         try:
             logging.info(f"Starting audio queue processing task for guild {guild_id}")
+            buffer_size = 10  # Number of packets to buffer before starting playback
+            buffer = []
+            last_activity = time.time()
+            
             while True:
                 if guild_id not in self.voice_states:
                     logging.info(f"Voice state gone for guild {guild_id}, stopping queue processing")
@@ -163,17 +175,57 @@ class Voice(Extension):
                             self.audio_queue[guild_id].get(),
                             timeout=0.5  # Wait up to 0.5 seconds for data
                         )
+                        last_activity = time.time()
                         logging.debug(f"Got {len(pcm_data)} bytes from queue for guild {guild_id}")
+                        
+                        # Send speaking packet if we weren't speaking before
+                        if not self.speaking_states.get(guild_id, False):
+                            try:
+                                await voice_state.ws.speaking(True)
+                                self.speaking_states[guild_id] = True
+                                logging.debug("Started speaking")
+                            except Exception as e:
+                                logging.error(f"Failed to send speaking packet: {e}")
+                                continue
+                        
                     except asyncio.TimeoutError:
+                        # Check if we've been inactive for too long
+                        if time.time() - last_activity > 30:  # 30 seconds of inactivity
+                            logging.info(f"No audio activity for 30 seconds in guild {guild_id}, stopping queue processing")
+                            # Process any remaining packets in the buffer before stopping
+                            if buffer:
+                                for pcm_data in buffer:
+                                    await self.send_audio_packet(voice_state, pcm_data)
+                                    logging.debug(f"Sent final audio packet to Discord for guild {guild_id}")
+                                    self.audio_queue[guild_id].task_done()
+                                buffer = []
+                            
+                            # Send stop speaking packet after processing all packets
+                            if self.speaking_states.get(guild_id, False):
+                                try:
+                                    await voice_state.ws.speaking(False)
+                                    self.speaking_states[guild_id] = False
+                                    logging.debug("Stopped speaking due to inactivity")
+                                except Exception as e:
+                                    logging.error(f"Failed to send stop speaking packet: {e}")
+                            break
                         # No data available, just continue
                         continue
                     
-                    # Process and send the audio data
-                    await self.send_audio_packet(voice_state, pcm_data)
-                    logging.debug(f"Sent audio packet to Discord for guild {guild_id}")
+                    # Add to buffer
+                    buffer.append(pcm_data)
                     
-                    # Mark task as done
-                    self.audio_queue[guild_id].task_done()
+                    # If we have enough packets buffered, start processing
+                    if len(buffer) >= buffer_size:
+                        # Process all buffered packets
+                        for pcm_data in buffer:
+                            await self.send_audio_packet(voice_state, pcm_data)
+                            logging.debug(f"Sent audio packet to Discord for guild {guild_id}")
+                            # Mark task as done
+                            self.audio_queue[guild_id].task_done()
+                        
+                        # Clear buffer
+                        buffer = []
                     
                 except Exception as e:
                     logging.error(f"Error processing audio queue: {type(e).__name__}: {str(e)}", exc_info=True)
@@ -325,16 +377,6 @@ class Voice(Extension):
             if sequence % 500 == 0:  # Reduced from every 100 to every 500 packets
                 logging.info(f"Processed {sequence} audio packets")
 
-            # Send speaking packet only if we weren't speaking before
-            if not self.speaking_states.get(guild_id, False):
-                try:
-                    await voice_state.ws.speaking(True)
-                    self.speaking_states[guild_id] = True
-                    logging.debug("Started speaking")
-                except Exception as e:
-                    logging.error(f"Failed to send speaking packet: {e}")
-                    return
-
             # Process one frame at a time
             frame_size = FRAME_SIZE * CHANNELS * 2  # 2 bytes per sample = 3840 bytes
             frames = []
@@ -379,27 +421,10 @@ class Voice(Extension):
                     
                 except (OSError, ConnectionError) as e:
                     logging.error(f"Failed to send audio packet: {e}")
-                    # Try to stop speaking if we encounter a connection error
-                    try:
-                        if self.speaking_states.get(guild_id, False):
-                            await voice_state.ws.speaking(False)
-                            self.speaking_states[guild_id] = False
-                            logging.debug("Stopped speaking due to connection error")
-                    except:
-                        pass
                     return
             
             # Update voice state sequence
             voice_state.ws.sequence = sequence
-            
-            # Send stop speaking packet since we're done
-            if self.speaking_states.get(guild_id, False):
-                try:
-                    await voice_state.ws.speaking(False)
-                    self.speaking_states[guild_id] = False
-                    logging.debug("Stopped speaking")
-                except Exception as e:
-                    logging.error(f"Failed to send stop speaking packet: {e}")
             
         except Exception as e:
             logging.error(f"Error sending audio packet: {type(e).__name__}: {str(e)}", exc_info=True)
@@ -629,17 +654,62 @@ class Voice(Extension):
                 logging.info("OpenAI started speaking")
             
             elif msg_type == "response.done":
-                logging.info("OpenAI finished speaking: \"{}\"".format(msg["response"]["output"][0]["content"][0]["transcript"]))
-            
+                logging.info("OpenAI finished speaking: \"{}\", status of \"{}\"".format(msg["response"]["output"][0]["content"][0]["transcript"], msg["response"]["status"]))
+                if msg["response"]["status"] == "cancelled":
+                    # Clear the audio queue for this guild
+                    if hasattr(ws, 'guild_id') and ws.guild_id in self.audio_queue:
+                        # Create a task to clear the queue
+                        async def clear_queue():
+                            logging.info(f"Clearing audio queue for guild {ws.guild_id}")
+                            while not self.audio_queue[ws.guild_id].empty():
+                                try:
+                                    await self.audio_queue[ws.guild_id].get()
+                                    self.audio_queue[ws.guild_id].task_done()
+                                except Exception as e:
+                                    logging.error(f"Error clearing audio queue: {e}")
+                                    break
+                            
+                            # Send stop speaking packet after clearing queue
+                            if ws.guild_id in self.voice_states:
+                                voice_state = self.voice_states[ws.guild_id][0]
+                                if voice_state and voice_state.ws and self.speaking_states.get(ws.guild_id, False):
+                                    try:
+                                        await voice_state.ws.speaking(False)
+                                        self.speaking_states[ws.guild_id] = False
+                                        logging.debug("Stopped speaking after cancelled response")
+                                    except Exception as e:
+                                        logging.error(f"Failed to send stop speaking packet: {e}")
+                        
+                        # Run the clear_queue task in the main event loop
+                        loop = asyncio.get_event_loop()
+                        loop.create_task(clear_queue())
+                        logging.info(f"Cleared audio queue for guild {ws.guild_id} after cancelled response")
+                        
+                        # Track this cancelled response
+                        if ws.guild_id not in self.cancelled_responses:
+                            self.cancelled_responses[ws.guild_id] = set()
+                        self.cancelled_responses[ws.guild_id].add(msg["response"]["id"])
+                        logging.info(f"Marked response {msg['response']['id']} as cancelled for guild {ws.guild_id}")
             elif msg_type == "response.text.delta":
                 text = msg.get("text", "")
                 if text.strip():  # Only log non-empty text
                     logging.info(f"OpenAI: {text}")
-            
+
+            elif msg_type == "conversation.item.truncated":
+                # TODO: Stop the audio stream
+                logging.info("!!! OpenAI conversation item truncated")
             elif msg_type == "response.audio.delta":
                 try:
                     # Get the base64 encoded audio data
                     b64encoded_audio = msg.get("delta", "")
+                    
+                    # Check if this response was cancelled
+                    if hasattr(ws, 'guild_id') and ws.guild_id in self.cancelled_responses:
+                        response_id = msg.get("response_id")
+                        if response_id and response_id in self.cancelled_responses[ws.guild_id]:
+                            logging.warning(f"Received audio delta for cancelled response {response_id} in guild {ws.guild_id}")
+                            return  # Skip processing cancelled audio
+                    
                     logging.info(f"Received audio delta with {len(b64encoded_audio)} bytes of base64 data")
                     
                     if not b64encoded_audio:
@@ -737,14 +807,15 @@ class Voice(Extension):
                         "session": {
                             "turn_detection": {
                                 "type": "server_vad",
+                                # "eagerness": "high",
                                 "threshold": 0.5,
                                 "prefix_padding_ms": 300,
                                 "silence_duration_ms": 200,
                                 "create_response": True,
                                 "interrupt_response": True
                             },
-                            "voice": "alloy",
-                            "instructions": "You are a helpful AI assistant in a Discord voice chat. Keep your responses concise and natural.",
+                            "voice": "ballad",
+                            "instructions":INSTRUCTIONS,
                             "modalities": ["audio", "text"],
                             "temperature": 0.8,
                             "input_audio_format": "pcm16",  # 16-bit PCM
@@ -810,9 +881,6 @@ class Voice(Extension):
             # Initialize audio queue for this guild with a max size
             self.audio_queue[guild_id] = asyncio.Queue(maxsize=100)  # Limit queue size to prevent memory issues
             
-            # Ensure queue processing task is running
-            self.start_discord_audio_queue(guild_id)
-            
             # Create the ready event before initializing the WebSocket
             self.ws_ready[guild_id] = threading.Event()
 
@@ -863,6 +931,9 @@ class Voice(Extension):
                 daemon=True
             )
             self.socket_threads[guild_id].start()
+
+            # Start the audio queue processing task
+            self.start_discord_audio_queue(guild_id)
 
             await ctx.send("Connected to voice channel and started streaming!")
             logging.info("Successfully joined voice channel for guild %d", guild_id)
