@@ -17,6 +17,7 @@ load_dotenv() # Needs to be here for OpenAI
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from src.chatGPT import respondWithChatGPT
+from src.database.supabase_client import get_client
 from src.gptMemory import memory
 from src.listeners.gameRoast import roast_for_bad_game
 from src.mistral import respondWithMistral
@@ -63,10 +64,9 @@ COMMAND_POST_GUILD_URL = "https://discord.com/api/v8/applications/92364771737534
 client = AsyncOpenAI()
 
 # Create bot and load extensions
-
-
 bot = Client(token=TOKEN, intents=Intents.DEFAULT | Intents.MESSAGE_CONTENT | Intents.GUILD_PRESENCES | Intents.GUILD_MEMBERS)
 
+# Load all extensions
 bot.load_extension('src.commands.ip')
 bot.load_extension('src.commands.kill')
 bot.load_extension('src.commands.mc')
@@ -90,6 +90,7 @@ async def update_presence():
 async def on_ready():
     await update_presence()
     update_presence.start()
+    cleanup_old_reminders.start()
     print("Connected to Discord! Running in {} mode.".format(ENVTYPE))
     print("Interactions version: {}".format(interactions.__version__))
     sys.stdout.flush()
@@ -116,10 +117,10 @@ async def gptHandleMessage(message: interactions.Message):
     clean_content = message.content.replace(
         '<@{}>'.format(APPLICATION_IDS[ENVTYPE]), 'compubot')
 
-    memory.append(message.channel_id, '{}: """{}"""'.format(
+    memory.append(message.channel.id, '{}: """{}"""'.format(
         message.author.username, clean_content))
 
-    shouldGoToMistral = flagged_by_moderation(clean_content) or memory.is_offensive(message.channel_id)
+    shouldGoToMistral = flagged_by_moderation(clean_content) or memory.is_offensive(message.channel.id)
     # Try ChatGPT, then skip to mistral if it fails anyway
     if not shouldGoToMistral:
         print("NON-MISTRAL CALL")
@@ -137,9 +138,9 @@ async def gptHandleMessage(message: interactions.Message):
 
 @listen()
 async def on_message_create(event: MessageCreate):
-    bot_user = await bot.fetch_self()
-    channel = await event.message.get_channel()
-    if (bot_user.id in [u['id'] for u in event.message.mentions]
+    bot_user = bot.user
+    channel = event.message.channel
+    if (bot_user.id in [u.id async for u in event.message.mention_users]
         or channel.type == interactions.ChannelType.DM) \
             and bot_user.id != event.message.author.id \
             and event.message.content:
@@ -180,5 +181,16 @@ async def sike(ctx: interactions.SlashContext):
     else:
         await ctx.send('We weren\'t talking about anything.')
 
+
+@Task.create(IntervalTrigger(seconds=EVERY_24_HOURS))
+async def cleanup_old_reminders():
+    """Clean up old inactive reminders daily"""
+    try:
+        db = get_client()
+        deleted = await db.cleanup_old_reminders()
+        if deleted > 0:
+            logging.info(f"Cleaned up {deleted} old reminders")
+    except Exception as e:
+        logging.error(f"Error in reminder cleanup task: {e}")
 
 bot.start()

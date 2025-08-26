@@ -28,10 +28,10 @@ async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, i
     functions = FUNCTIONS[:]
     function_calls = FUNCTION_CALLS.copy()
 
-    channel = await message.get_channel()
+    channel = message.channel
     async with channel.typing:
         try:
-            messages = memory.get_messages(message.channel_id)
+            messages = memory.get_messages(message.channel.id)
             if (len(image_links) > 0):
                 if isinstance(messages[-1]['content'], str):
                     messages[-1]['content'] = [{
@@ -74,7 +74,7 @@ async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, i
 
             if not tool_name == 'invoke_gpt_4':
                 memory.append(
-                    message.channel_id,
+                    message.channel.id,
                     function_response,
                     role='function',
                     name=tool_name,
@@ -83,7 +83,7 @@ async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, i
 
                 response = await client.chat.completions.create(
                     model=model,
-                    messages=memory.get_messages(message.channel_id),
+                    messages=memory.get_messages(message.channel.id),
                     tools=functions,
                     tool_choice="none"
                 )
@@ -95,7 +95,7 @@ async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, i
                 reply = filter(reply)
 
             # Save this to the current conversation
-            memory.append(message.channel_id, reply, role='assistant')
+            memory.append(message.channel.id, reply, role='assistant')
 
             if channel.type == interactions.ChannelType.DM:
                 await channel.send(reply)

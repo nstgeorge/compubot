@@ -1,12 +1,13 @@
 import asyncio
 import datetime
 import logging
-from typing import Union
+from typing import Dict, Union
 
 from dotenv import load_dotenv
 from interactions import (Client, Extension, Member, OptionType, Role,
-                          SlashContext, User, slash_command, slash_option,
-                          subcommand)
+                          SlashContext, User, slash_command, slash_option)
+
+from src.database.supabase_client import get_client
 
 LOGGER = logging.getLogger(__name__)
 load_dotenv()
@@ -15,7 +16,14 @@ class Remind(Extension):
   def __init__(self, client: Client):
     LOGGER.debug("Initialized /remind shard")
     self.client = client
-    self.reminders = {}  # Store active reminders
+    self.db = get_client()
+    self.reminders: Dict[str, asyncio.Task] = {}  # Store active reminder tasks
+    self.ready = False
+
+  async def extension_load(self):
+    """Called when the extension is loaded"""
+    await self._load_active_reminders()
+    self.ready = True
 
   def __get_output_channel(self, ctx):
     return ctx.channel_id
@@ -91,10 +99,25 @@ class Remind(Extension):
         await ctx.send("Cannot set reminders in the past!")
         return
 
+      # Store in database
+      reminder_data = {
+        "server_id": str(ctx.guild_id),
+        "channel_id": str(ctx.channel_id),
+        "author_id": str(ctx.author.id),
+        "target_id": str(who.id),
+        "description": description,
+        "reminder_time": reminder_time.isoformat(),
+        "is_recurring": False
+      }
+      
+      reminder_id = await self.db.store_reminder(reminder_data)
+      if not reminder_id:
+        await ctx.send("Failed to create reminder. Please try again.")
+        return
+
       # Schedule the reminder
-      reminder_id = f"{ctx.author.id}_{description}"
       self.reminders[reminder_id] = asyncio.create_task(self._schedule_reminder(
-        ctx, who, description, delay
+        ctx.channel, who, description, delay, reminder_id
       ))
 
       await ctx.send(f"I'll remind <@{who.id}> about '{description}' at {reminder_time}")
@@ -165,10 +188,26 @@ class Remind(Extension):
       else:
         start_time = datetime.datetime.now() + datetime.timedelta(seconds=interval_seconds)
 
+      # Store in database
+      reminder_data = {
+        "server_id": str(ctx.guild_id),
+        "channel_id": str(ctx.channel_id),
+        "author_id": str(ctx.author.id),
+        "target_id": str(who.id),
+        "description": description,
+        "reminder_time": start_time.isoformat(),
+        "is_recurring": True,
+        "interval_seconds": interval_seconds
+      }
+      
+      reminder_id = await self.db.store_reminder(reminder_data)
+      if not reminder_id:
+        await ctx.send("Failed to create reminder. Please try again.")
+        return
+
       # Schedule recurring reminder
-      reminder_id = f"{ctx.author.id}_{description}"
       self.reminders[reminder_id] = asyncio.create_task(self._schedule_recurring_reminder(
-        ctx, who, description, interval_seconds, start_time
+        ctx.channel, who, description, interval_seconds, start_time, reminder_id
       ))
 
       await ctx.send(f"I'll remind <@{who.id}> about '{description}' every {interval} starting {start_time}")
@@ -187,32 +226,105 @@ class Remind(Extension):
     opt_type=OptionType.STRING
   )
   async def end_reminder(self, ctx: SlashContext, description: str):
-    reminder_id = f"{ctx.author.id}_{description}"
+    # Find active reminders by description and author
+    reminders = await self.db.get_data('reminders', {
+      'author_id': str(ctx.author.id),
+      'description': description,
+      'is_active': True
+    })
     
-    if reminder_id in self.reminders:
-      self.reminders[reminder_id].cancel()
-      del self.reminders[reminder_id]
-      await ctx.send(f"Reminder '{description}' has been cancelled")
-    else:
+    if not reminders:
       await ctx.send("No matching reminder found")
-
-  async def _schedule_reminder(self, ctx, who, description, delay):
-    await asyncio.sleep(delay)
-    channel = await self.client.fetch_channel(ctx.channel_id)
-    await channel.send(f"<@{who.id}>: {description}")
-
-  async def _schedule_recurring_reminder(self, ctx, who, description, interval, start_time):
-    while True:
-      now = datetime.datetime.now()
-      delay = (start_time - now).total_seconds()
+      return
       
-      if delay > 0:
-        await asyncio.sleep(delay)
+    for reminder in reminders:
+      reminder_id = reminder['id']
+      if reminder_id in self.reminders:
+        self.reminders[reminder_id].cancel()
+        del self.reminders[reminder_id]
       
-      channel = await self.client.fetch_channel(ctx.channel_id)
+      await self.db.update_reminder(reminder_id, {'is_active': False})
+    
+    await ctx.send(f"Reminder '{description}' has been cancelled")
+
+  async def _schedule_reminder(self, channel, who, description, delay, reminder_id):
+    try:
+      await asyncio.sleep(delay)
       await channel.send(f"<@{who.id}>: {description}")
-      
-      start_time += datetime.timedelta(seconds=interval)
+      # Mark as inactive once completed
+      await self.db.update_reminder(reminder_id, {'is_active': False})
+      if reminder_id in self.reminders:
+        del self.reminders[reminder_id]
+    except asyncio.CancelledError:
+      return
+    except Exception as e:
+      LOGGER.error(f"Error in reminder {reminder_id}: {e}")
+
+  async def _schedule_recurring_reminder(self, channel, who, description, interval, start_time, reminder_id):
+    try:
+      while True:
+        now = datetime.datetime.now()
+        delay = (start_time - now).total_seconds()
+        
+        if delay > 0:
+          await asyncio.sleep(delay)
+        
+        await channel.send(f"<@{who.id}>: {description}")
+        
+        # Update next reminder time in database
+        start_time += datetime.timedelta(seconds=interval)
+        await self.db.update_reminder(reminder_id, {
+          'reminder_time': start_time.isoformat()
+        })
+    except asyncio.CancelledError:
+      return
+    except Exception as e:
+      LOGGER.error(f"Error in recurring reminder {reminder_id}: {e}")
+      # Mark as inactive if there's an error
+      await self.db.update_reminder(reminder_id, {'is_active': False})
+      if reminder_id in self.reminders:
+        del self.reminders[reminder_id]
+
+  async def _load_active_reminders(self):
+    """Load and schedule all active reminders from the database"""
+    try:
+      active_reminders = await self.db.get_active_reminders()
+      for reminder in active_reminders:
+        now = datetime.datetime.now()
+        reminder_time = datetime.datetime.fromisoformat(reminder['reminder_time'])
+        delay = (reminder_time - now).total_seconds()
+        
+        if delay < 0:
+          # Mark old reminders as inactive
+          await self.db.update_reminder(reminder['id'], {'is_active': False})
+          continue
+        
+        channel = await self.client.fetch_channel(reminder['channel_id'])
+        who = await self.client.fetch_user(reminder['target_id'])
+        
+        if reminder['is_recurring']:
+          self.reminders[reminder['id']] = asyncio.create_task(
+            self._schedule_recurring_reminder(
+              channel,
+              who,
+              reminder['description'],
+              reminder['interval_seconds'],
+              reminder_time,
+              reminder['id']
+            )
+          )
+        else:
+          self.reminders[reminder['id']] = asyncio.create_task(
+            self._schedule_reminder(
+              channel,
+              who,
+              reminder['description'],
+              delay,
+              reminder['id']
+            )
+          )
+    except Exception as e:
+      LOGGER.error(f"Error loading active reminders: {e}")
 
 def setup(bot):
   Remind(bot)
