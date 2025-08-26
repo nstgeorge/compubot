@@ -1,8 +1,8 @@
 import random
 import time
 
-import interactions
-from interactions.utils.get import get
+from interactions import Client
+from interactions.api.events import PresenceUpdate
 
 from src.gptMemory import memory
 from src.mistral import oneOffResponseMistral
@@ -52,7 +52,7 @@ def roast_probability(user_meta):
         / (SECS_PER_DAY * DAYS_TO_100_PROBABILITY)
       ) * (100 - BASE_ROAST_PROBABILITY))
 
-async def roast_for_bad_game(bot: interactions.Client, activity: interactions.Presence):
+async def roast_for_bad_game(bot: Client, activity: PresenceUpdate):
   if len(activity.activities) > 0:
     matches = list(set(GAME_IDS) & set([a.application_id for a in activity.activities]))
     if len(matches) > 0 and str(activity.user.id) in PING_WHEN_PLAYING:
@@ -67,7 +67,7 @@ async def roast_for_bad_game(bot: interactions.Client, activity: interactions.Pr
       ))
       if user_meta['last_ping'] + AVOID_SPAM_COOLDOWN < time.time() \
         and random.randrange(0, 100) <= roast_probability(user_meta):
-          channel = await get(bot, interactions.Channel, object_id=CHANNEL_TO_PING)
+          channel = bot.get_channel(CHANNEL_TO_PING)
           async with channel.typing:
             print('Got roastable presence update for {} ({})'.format(activity.user.id, activity.activities[0].name))
             PING_WHEN_PLAYING[str(activity.user.id)]['last_ping'] = time.time()

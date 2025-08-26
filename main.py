@@ -7,13 +7,13 @@ import time
 
 import interactions
 from dotenv import load_dotenv
-from interactions import Intents
-from interactions.utils.get import get
+from interactions import (Activity, Client, Intents, IntervalTrigger, Task,
+                          listen, slash_command)
+from interactions.api.events import MessageCreate
 from openai import (APITimeoutError, AsyncOpenAI, BadRequestError,
                     RateLimitError)
 
 load_dotenv() # Needs to be here for OpenAI
-from interactions.ext.tasks import IntervalTrigger, create_task
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from src.chatGPT import respondWithChatGPT
@@ -65,41 +65,29 @@ client = AsyncOpenAI()
 # Create bot and load extensions
 
 
-bot = interactions.Client(token=TOKEN, intents=Intents.DEFAULT | Intents.GUILD_MESSAGE_CONTENT | Intents.GUILD_PRESENCES | Intents.GUILD_MEMBERS)
+bot = Client(token=TOKEN, intents=Intents.DEFAULT | Intents.MESSAGE_CONTENT | Intents.GUILD_PRESENCES | Intents.GUILD_MEMBERS)
 
-bot.load('src.commands.ip')
-bot.load('src.commands.kill')
-bot.load('src.commands.locate')
-bot.load('src.commands.mc')
-bot.load('src.commands.mock')
-bot.load('src.commands.quote')
-bot.load('src.commands.when')
-bot.load('src.commands.sentiment')
-bot.load('src.commands.stats')
-bot.load('src.commands.imageGeneration')
-bot.load('src.commands.offensiveMode')
+bot.load_extension('src.commands.ip')
+bot.load_extension('src.commands.kill')
+bot.load_extension('src.commands.mc')
+bot.load_extension('src.commands.mock')
+bot.load_extension('src.commands.quote')
+bot.load_extension('src.commands.imageGeneration')
+bot.load_extension('src.commands.remind')
 
 
-@create_task(IntervalTrigger(EVERY_24_HOURS))
+@Task.create(IntervalTrigger(EVERY_24_HOURS))
 async def update_presence():
     random_presence = random.choice(PRESENCE_OBJECTS)
     print("Updating presence: {}".format(random_presence['name']))
     sys.stdout.flush()
-    presence = interactions.ClientPresence(
-        activities=[
-            interactions.PresenceActivity(
-                name=random_presence['name'], type=random_presence['type'])
-        ],
-        status=interactions.StatusType.ONLINE,
-        afk=False
-    )
-    await bot.change_presence(presence)
+    await bot.change_presence(activity=Activity(name=random_presence['name'], type=random_presence['type']))
 
 # on bot start, do stuff
 
 
-@bot.event()
-async def on_start():
+@listen()
+async def on_ready():
     await update_presence()
     update_presence.start()
     print("Connected to Discord! Running in {} mode.".format(ENVTYPE))
@@ -147,16 +135,16 @@ async def gptHandleMessage(message: interactions.Message):
 # async def on_presence_update(_, activity: interactions.Presence):
     # await roast_for_bad_game(bot, activity)
 
-@bot.event()
-async def on_message_create(message: interactions.Message):
-    bot_user = await bot.get_self_user()
-    channel = await message.get_channel()
-    if (bot_user.id in [u['id'] for u in message.mentions]
+@listen()
+async def on_message_create(event: MessageCreate):
+    bot_user = await bot.fetch_self()
+    channel = await event.message.get_channel()
+    if (bot_user.id in [u['id'] for u in event.message.mentions]
         or channel.type == interactions.ChannelType.DM) \
-            and bot_user.id != message.author.id \
-            and message.content:
+            and bot_user.id != event.message.author.id \
+            and event.message.content:
         try:
-            await gptHandleMessage(message)
+            await gptHandleMessage(event.message)
         except APITimeoutError:
             print('ChatGPT API timed out.')
         except RateLimitError as err:
@@ -165,15 +153,15 @@ async def on_message_create(message: interactions.Message):
             print('An unknown error has occurred: ', err)
             raise err
 
-    if message.content and 'cock' in message.content.lower():
-        await message.create_reaction('YEP:1088687844148641902')
+    if event.message.content and 'cock' in event.message.content.lower():
+        await event.message.create_reaction('YEP:1088687844148641902')
 # GPT commands
 
-@bot.command(
+@slash_command(
     name="forget",
     description="make compubot forget the conversation you're having"
 )
-async def forget(ctx: interactions.CommandContext):
+async def forget(ctx: interactions.SlashContext):
     if memory.has_conversation(ctx.channel_id):
         memory.clear(ctx.channel_id)
         await ctx.send('... What were we just talking about?')
@@ -181,11 +169,11 @@ async def forget(ctx: interactions.CommandContext):
         await ctx.send('We weren\'t talking about anything.')
 
 
-@bot.command(
+@slash_command(
     name="sike",
     description="make compubot forget the last message"
 )
-async def sike(ctx: interactions.CommandContext):
+async def sike(ctx: interactions.SlashContext):
     if memory.has_conversation(ctx.channel_id):
         memory.sike(ctx.channel_id)
         await ctx.send('... Huh?')

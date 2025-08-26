@@ -1,6 +1,4 @@
-from interactions import Member, Message
-from interactions.api.models.channel import ChannelType
-from interactions.utils.get import get
+from interactions import ChannelType, Member, Message
 
 from src.commands.debug import add_prompt_handle, print_debug_handle
 from src.commands.imageGeneration import generate_image_handle

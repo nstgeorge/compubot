@@ -1,7 +1,9 @@
 import logging
 from datetime import datetime
 
-import interactions
+from interactions import (Client, Embed, EmbedAttachment, Extension, Message,
+                          OptionType, SlashContext, slash_command,
+                          slash_option)
 from openai import AsyncOpenAI, BadRequestError, OpenAIError
 
 from src.gptMemory import DEFAULT_MODEL, MODEL_PROMPT, memory
@@ -33,12 +35,12 @@ async def generate_image(prompt):
     n=1,
   )
 
-async def generate_image_handle(memory, message: interactions.Message, prompt):
+async def generate_image_handle(memory, message: Message, prompt):
   resp = await message.reply("on it...")
   try:
     image = await generate_image(prompt)
-    embed = interactions.Embed(
-        image=interactions.EmbedImageStruct(
+    embed = Embed(
+        image=EmbedAttachment(
           url=image.data[0].url
         ),
         description=prompt
@@ -51,24 +53,22 @@ async def generate_image_handle(memory, message: interactions.Message, prompt):
   except OpenAIError:
     return "Unable to generate the image."
 
-class ImageGeneration(interactions.Extension):
-    def __init__(self, client: interactions.Client):
+class ImageGeneration(Extension):
+    def __init__(self, client: Client):
         LOGGER.debug("Initialized /imagine shard")
         self.client = client
 
-    @interactions.extension_command(
+    @slash_command(
         name="imagine",
-        description="compubot draws a picture",
-        options=[
-            interactions.Option(
-                name="prompt",
-                description="what to draw",
-                required=True,
-                type=interactions.OptionType.STRING
-            )
-        ]
+        description="compubot draws a picture"
     )
-    async def imagine(self, ctx: interactions.CommandContext, prompt: str):
+    @slash_option(
+        name="prompt",
+        description="what to draw",
+        required=True,
+        opt_type=OptionType.STRING
+    )
+    async def imagine(self, ctx: SlashContext, prompt: str):
         msg = await ctx.send('on it...')
 
         messages = memory.get_messages(ctx.channel_id)
@@ -89,8 +89,8 @@ class ImageGeneration(interactions.Extension):
         resp = response.choices[0].message.content
         try:
           image = await generate_image(resp)
-          embed = interactions.Embed(
-             image=interactions.EmbedImageStruct(
+          embed = Embed(
+             image=EmbedAttachment(
                 url=image.data[0].url
              ),
              description=resp
@@ -106,4 +106,4 @@ class ImageGeneration(interactions.Extension):
             "imagine: {} generated an image of {}".format(ctx.author.id, prompt))
 
 def setup(bot):
-   ImageGeneration(bot)
+  ImageGeneration(bot)

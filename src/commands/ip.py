@@ -4,15 +4,16 @@ import logging
 import random
 import time
 
-import interactions
+from interactions import (Client, Extension, OptionType, SlashContext,
+                          slash_command, slash_option)
 
 LOGGER = logging.getLogger()
 IP_PHRASES = json.load(open("resources/ip_strings.json"))
 SETTINGS = json.load(open("resources/settings.json"))
 
 
-class IP(interactions.Extension):
-    def __init__(self, client: interactions.Client):
+class IP(Extension):
+    def __init__(self, client: Client):
         LOGGER.debug("Initialized /ip shard")
         self.client = client
         self.__spinner = itertools.cycle(
@@ -21,7 +22,7 @@ class IP(interactions.Extension):
     def __message_text(self, spinner, message):
         return "{} {}".format(spinner, message)
 
-    def __gen_user_ip(self, user: interactions.AllowedMentionType.USERS):
+    def __gen_user_ip(self, user: OptionType.MENTIONABLE):
         r = random.Random(user.id)
         return "{}.{}.{}.{}".format(r.randrange(1, 255, 1),
                                     r.randrange(1, 255, 1),
@@ -32,19 +33,17 @@ class IP(interactions.Extension):
         # r = random.Random(user.id)
         return "https://www.google.com/maps/@{},{},12z".format(random.uniform(-90, 90), random.uniform(-180, 180))
 
-    @interactions.extension_command(
+    @slash_command(
         name="ip",
-        description="really truly hack a person",
-        options=[
-            interactions.Option(
-                name="user",
-                description="your unfortunate target",
-                required=True,
-                type=interactions.OptionType.MENTIONABLE
-            )
-        ]
+        description="really truly hack a person"
     )
-    async def ip(self, ctx: interactions.CommandContext, user: interactions.AllowedMentionType.USERS):
+    @slash_option(
+        name="user",
+        description="your unfortunate target",
+        required=True,
+        opt_type=OptionType.MENTIONABLE
+    )
+    async def ip(self, ctx: SlashContext, user: OptionType.MENTIONABLE):
         texts = random.sample(
             IP_PHRASES, SETTINGS["ip"]["messages_per_request"])
         msg = await ctx.send("Beginning hack...")

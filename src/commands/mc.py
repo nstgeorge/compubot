@@ -1,7 +1,8 @@
 import json
 import logging
 
-import interactions
+from interactions import (Client, Extension, OptionType, SlashContext,
+                          slash_command, slash_option)
 from mcstatus import JavaServer
 
 SETTINGS = json.load(open("resources/settings.json"))
@@ -57,24 +58,22 @@ def get_status(ip: str):
         )
 
 
-class Minecraft(interactions.Extension):
-    def __init__(self, client: interactions.Client):
+class Minecraft(Extension):
+    def __init__(self, client: Client):
         LOGGER.debug("Initialized /mc shard")
         self.client = client
 
-    @interactions.extension_command(
+    @slash_command(
         name="mc",
-        description="check the status of a minecraft server",
-        options=[
-            interactions.Option(
-                name="ip",
-                description="ip or hostname of the server",
-                required=True,
-                type=interactions.OptionType.STRING
-            )
-        ]
+        description="check the status of a minecraft server"
     )
-    async def mc_status(self, ctx: interactions.CommandContext, ip: str):
+    @slash_option(
+        name="ip",
+        description="ip or hostname of the server",
+        required=True,
+        opt_type=OptionType.STRING
+    )
+    async def mc_status(self, ctx: SlashContext, ip: str):
         msg = await ctx.send('Just a second...')
         status_str = get_status(ip)
 

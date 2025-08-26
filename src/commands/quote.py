@@ -3,8 +3,9 @@ import logging
 import os
 from pathlib import Path
 
-import interactions
 from dotenv import load_dotenv
+from interactions import (Client, Extension, Message, SlashContext,
+                          message_context_menu)
 
 load_dotenv()
 
@@ -13,18 +14,18 @@ SETTINGS = json.load(open("resources/settings.json"))
 LOGGER = logging.getLogger()
 
 
-class Quote(interactions.Extension):
-    def __init__(self, client: interactions.Client):
+class Quote(Extension):
+    def __init__(self, client: Client):
         LOGGER.debug("Initialized /quote shard")
         self.client = client
 
-    def __get_output_channel(self, ctx: interactions.CommandContext):
+    def __get_output_channel(self, ctx: SlashContext):
         if ENVTYPE == "dev" and ctx.author.id in SETTINGS["global"]["admin_ids"]:
             return SETTINGS["quote"]["dev_output_channel_id"]
         else:
             return SETTINGS["quote"]["output_channel_id"]
 
-    def __message_string(self, message: interactions.Message):
+    def __message_string(self, message: Message):
         if message.content == "":
             return " - <@{}>, {}".format(message.author.id, message.timestamp)
 
@@ -32,8 +33,8 @@ class Quote(interactions.Extension):
                                            message.author.id,
                                            message.timestamp)
 
-    @interactions.extension_message_command(name="Quote")
-    async def quote_cmd(self, ctx: interactions.CommandContext):
+    @message_context_menu(name="Quote")
+    async def quote_cmd(self, ctx: SlashContext):
         channel = ctx.guild.get_channel(self.__get_output_channel(ctx))
         message = await ctx.channel.get_message(ctx.target_id)
         for attach in message.attachments:
