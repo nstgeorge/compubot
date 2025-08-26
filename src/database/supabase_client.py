@@ -2,6 +2,7 @@ import os
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
+
 from supabase import Client, create_client
 
 # Load environment variables
@@ -11,11 +12,16 @@ class SupabaseClient:
     """A wrapper around the Supabase client for better type handling and error management"""
     
     def __init__(self):
-        url = os.getenv("SUPABASE_URL")
-        key = os.getenv("SUPABASE_KEY")
+        # Use different Supabase projects for test/prod environments
+        env_type = os.getenv('ENV_TYPE', 'prod')
+        url_key = "SUPABASE_URL_TEST" if env_type == "test" else "SUPABASE_URL"
+        api_key = "SUPABASE_KEY_TEST" if env_type == "test" else "SUPABASE_KEY"
+        
+        url = os.getenv(url_key)
+        key = os.getenv(api_key)
         
         if not url or not key:
-            raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in environment variables")
+            raise ValueError(f"{url_key} and {api_key} must be set in environment variables")
         
         self.client: Client = create_client(url, key)
     
