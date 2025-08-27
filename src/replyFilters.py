@@ -13,7 +13,7 @@ def cleanReply(reply):
         return placeholder
         
     # Save uppercase sections before lowercasing
-    reply = re.sub(r'\{\s*caps\s*\}(.*?)\{\s*/caps\s*\}', save_caps, reply)
+    reply = re.sub(r'\{caps\}(.*?)\{/caps\}', save_caps, reply)
     
     # Convert to lowercase
     reply = reply.lower().strip()

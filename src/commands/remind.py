@@ -36,12 +36,6 @@ class Remind(Extension):
     sub_cmd_description="remind at a certain time"
   )
   @slash_option(
-    name="who",
-    description="who to remind",
-    required=True,
-    opt_type=OptionType.MENTIONABLE
-  )
-  @slash_option(
     name="when",
     description="when to remind",
     required=True,
@@ -53,7 +47,13 @@ class Remind(Extension):
     required=True,
     opt_type=OptionType.STRING
   )
-  async def remind_on(self, ctx: SlashContext, who: Union[Member, User, Role], when: str, description: str):
+  @slash_option(
+    name="who",
+    description="who to remind",
+    required=True,
+    opt_type=OptionType.MENTIONABLE
+  )
+  async def remind_on(self, ctx: SlashContext, when: str, description: str, who: Union[Member, User, Role]):
     try:
       now = datetime.datetime.now()
       
@@ -139,16 +139,16 @@ class Remind(Extension):
     opt_type=OptionType.STRING
   )
   @slash_option(
-    name="who",
-    description="who to remind",
-    required=True,
-    opt_type=OptionType.MENTIONABLE
-  )
-  @slash_option(
     name="description",
     description="what to remind about",
     required=True,
     opt_type=OptionType.STRING
+  )
+  @slash_option(
+    name="who",
+    description="who to remind",
+    required=True,
+    opt_type=OptionType.MENTIONABLE
   )
   @slash_option(
     name="starting_at",
@@ -156,7 +156,7 @@ class Remind(Extension):
     required=False,
     opt_type=OptionType.STRING
   )
-  async def remind_every(self, ctx: SlashContext, interval: str, who: Union[Member, User, Role], description: str, starting_at: str = None):
+  async def remind_every(self, ctx: SlashContext, interval: str, description: str, who: Union[Member, User, Role], starting_at: str = None):
     try:
       # Parse interval (simple implementation)
       interval_parts = interval.lower().split()

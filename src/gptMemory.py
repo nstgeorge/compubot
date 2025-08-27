@@ -37,7 +37,7 @@ IMPORTANT: Always use curly braces {} for emotes. The emote names are case-sensi
 Guidelines for using emotes:
 - Place them where they make sense in the sentence (start, middle, or end)
 - Use emotes as if you are a Twitch chatter
-- Sending messages that are just an emote is encouraged if it fits the context
+- IMPORTANT: If an emote is enough to express your reaction, just use the emote alone as the entire message
 
 """
     }

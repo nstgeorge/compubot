@@ -90,7 +90,7 @@ class EmoteManager:
             "there": "<:there:1410151071573344286>"
         }
 
-        self._environment = os.getenv("ENVIRONMENT", "development").lower()
+        self._environment = os.getenv("ENV_TYPE", "development").lower()
 
     def get_emote(self, name: str) -> Optional[str]:
         """
