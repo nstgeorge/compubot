@@ -134,7 +134,7 @@ class EmoteManager:
             Dictionary containing all available emotes with their IDs and descriptions
         """
         result = {}
-        env_emotes = self._prod_emotes if self._environment == "production" else self._dev_emotes
+        env_emotes = self._prod_emotes if self._environment == "prod" else self._dev_emotes
         
         # Add default emotes with descriptions
         for name, emote_id in self._default_emotes.items():

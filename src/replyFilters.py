@@ -58,9 +58,9 @@ def replaceEmotes(reply: str) -> str:
         for group in groups:
             if group is not None:
                 if ':' in group and not group.startswith('<'):  # Handle ":emotename:" format
-                    emote_name = group.strip(':')
+                    emote_name = group.strip(':').upper()  # Convert to uppercase for consistent matching
                 else:  # Handle {use_emote: name} or <use_emote: name> format
-                    emote_name = group.strip()
+                    emote_name = group.strip().upper()  # Convert to uppercase for consistent matching
                 break
                 
         if emote_name:
