@@ -108,7 +108,7 @@ class EmoteManager:
             return self._default_emotes[name]
             
         # Then try exact match in environment emotes
-        env_emotes = self._prod_emotes if self._environment == "production" else self._dev_emotes
+        env_emotes = self._prod_emotes if self._environment == "prod" else self._dev_emotes
         if name in env_emotes:
             return env_emotes[name]
             
