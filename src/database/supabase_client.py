@@ -70,7 +70,7 @@ class SupabaseClient:
             print(f"Error storing reminder: {e}")
             return None
 
-    async def get_active_reminders(self) -> List[Dict[str, Any]]:
+    def get_active_reminders(self) -> List[Dict[str, Any]]:
         """Get all active reminders"""
         try:
             response = self.client.table('reminders') \
@@ -82,7 +82,7 @@ class SupabaseClient:
             print(f"Error fetching active reminders: {e}")
             return []
 
-    async def update_reminder(self, reminder_id: str, data: Dict[str, Any]) -> bool:
+    def update_reminder(self, reminder_id: str, data: Dict[str, Any]) -> bool:
         """Update a reminder's data"""
         try:
             response = self.client.table('reminders') \
@@ -94,7 +94,7 @@ class SupabaseClient:
             print(f"Error updating reminder: {e}")
             return False
 
-    async def delete_reminder(self, reminder_id: str) -> bool:
+    def delete_reminder(self, reminder_id: str) -> bool:
         """Delete a reminder"""
         try:
             response = self.client.table('reminders') \
@@ -106,7 +106,7 @@ class SupabaseClient:
             print(f"Error deleting reminder: {e}")
             return False
 
-    async def cleanup_old_reminders(self, older_than_days: int = 7) -> int:
+    def cleanup_old_reminders(self, older_than_days: int = 7) -> int:
         """Delete old inactive reminders from the database
         
         Args:
