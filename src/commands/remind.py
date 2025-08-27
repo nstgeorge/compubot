@@ -8,6 +8,7 @@ from interactions import (Client, Extension, Member, OptionType, Role,
                           SlashContext, User, slash_command, slash_option)
 
 from src.database.supabase_client import get_client
+from src.utils.emotes import emotes
 
 LOGGER = logging.getLogger(__name__)
 load_dotenv()
@@ -101,11 +102,10 @@ class Remind(Extension):
 
       # Store in database
       reminder_data = {
-        "server_id": str(ctx.guild_id),
         "channel_id": str(ctx.channel_id),
-        "author_id": str(ctx.author.id),
+        "user_id": str(ctx.author.id),
         "target_id": str(who.id),
-        "description": description,
+        "message": description,
         "reminder_time": reminder_time.isoformat(),
         "is_recurring": False
       }
@@ -120,7 +120,8 @@ class Remind(Extension):
         ctx.channel, who, description, delay, reminder_id
       ))
 
-      await ctx.send(f"I'll remind <@{who.id}> about '{description}' at {reminder_time}")
+      unix_timestamp = int(reminder_time.timestamp())
+      await ctx.send(f"{emotes.get_emote('Okay')} I'll remind <@{who.id}> about '{description}' at <t:{unix_timestamp}:F>")
 
     except ValueError as e:
       await ctx.send(f"Invalid time format: {str(e)}. Please use either ISO format (YYYY-MM-DD HH:MM:SS) or relative format (e.g. 'in 3 days')")
@@ -190,11 +191,10 @@ class Remind(Extension):
 
       # Store in database
       reminder_data = {
-        "server_id": str(ctx.guild_id),
         "channel_id": str(ctx.channel_id),
-        "author_id": str(ctx.author.id),
+        "user_id": str(ctx.author.id),
         "target_id": str(who.id),
-        "description": description,
+        "message": description,
         "reminder_time": start_time.isoformat(),
         "is_recurring": True,
         "interval_seconds": interval_seconds
@@ -210,7 +210,8 @@ class Remind(Extension):
         ctx.channel, who, description, interval_seconds, start_time, reminder_id
       ))
 
-      await ctx.send(f"I'll remind <@{who.id}> about '{description}' every {interval} starting {start_time}")
+      unix_timestamp = int(start_time.timestamp())
+      await ctx.send(f"{emotes.get_emote('Okay')} I'll remind <@{who.id}> about '{description}' every {interval} starting at <t:{unix_timestamp}:F>")
 
     except (ValueError, IndexError):
       await ctx.send("Invalid interval format. Use format like 'every 2 hours'")
@@ -228,8 +229,8 @@ class Remind(Extension):
   async def end_reminder(self, ctx: SlashContext, description: str):
     # Find active reminders by description and author
     reminders = await self.db.get_data('reminders', {
-      'author_id': str(ctx.author.id),
-      'description': description,
+      'user_id': str(ctx.author.id),
+      'message': description,
       'is_active': True
     })
     
@@ -250,7 +251,8 @@ class Remind(Extension):
   async def _schedule_reminder(self, channel, who, description, delay, reminder_id):
     try:
       await asyncio.sleep(delay)
-      await channel.send(f"<@{who.id}>: {description}")
+      unix_timestamp = int(datetime.datetime.now().timestamp())
+      await channel.send(f"{emotes.get_emote('dinkDonk')} <@{who.id}>: {description}")
       # Mark as inactive once completed
       await self.db.update_reminder(reminder_id, {'is_active': False})
       if reminder_id in self.reminders:
@@ -268,9 +270,10 @@ class Remind(Extension):
         
         if delay > 0:
           await asyncio.sleep(delay)
-        
-        await channel.send(f"<@{who.id}>: {description}")
-        
+
+        unix_timestamp = int(datetime.datetime.now().timestamp())
+        await channel.send(f"{emotes.get_emote('dinkDonk')} <@{who.id}>: {description}")
+
         # Update next reminder time in database
         start_time += datetime.timedelta(seconds=interval)
         await self.db.update_reminder(reminder_id, {

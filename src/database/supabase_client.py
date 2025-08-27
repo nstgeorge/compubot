@@ -28,7 +28,7 @@ class SupabaseClient:
     async def get_server_setting(self, server_id: str, key: str) -> Optional[Any]:
         """Retrieve a server-specific setting"""
         try:
-            response = await self.client.table('server_settings').select('value') \
+            response = self.client.table('server_settings').select('value') \
                 .eq('server_id', server_id) \
                 .eq('key', key) \
                 .single() \
@@ -42,7 +42,7 @@ class SupabaseClient:
         """Set or update a server-specific setting"""
         try:
             # Try to update first
-            response = await self.client.table('server_settings') \
+            response = self.client.table('server_settings') \
                 .update({'value': value}) \
                 .eq('server_id', server_id) \
                 .eq('key', key) \

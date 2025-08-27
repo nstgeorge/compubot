@@ -9,13 +9,14 @@ from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from src.functionDefinitions import FUNCTION_CALLS, FUNCTIONS
 from src.gptMemory import MODEL_PROMPT, GPTMemory
-from src.replyFilters import cleanReply, stripQuotations, stripSelfTag
+from src.replyFilters import (cleanReply, replaceEmotes, stripQuotations,
+                              stripSelfTag)
 
 API_URL = "https://api.fireworks.ai/inference/v1/"
 # MODEL = "accounts/fireworks/models/mistral-7b-instruct-v0p2"
 MODEL = "accounts/fireworks/models/mixtral-8x7b-instruct"
 # MODEL = "accounts/fireworks/models/firefunction-v1"
-reply_cleanup = [cleanReply, stripSelfTag, stripQuotations]
+reply_cleanup = [cleanReply, replaceEmotes, stripSelfTag, stripQuotations]
 
 client = AsyncOpenAI(base_url=API_URL, api_key=os.getenv("FIREWORKS_API_KEY"))
 

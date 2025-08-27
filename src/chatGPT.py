@@ -7,7 +7,8 @@ from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from src.functionDefinitions import FUNCTION_CALLS, FUNCTIONS
 from src.gptMemory import DEFAULT_MODEL, MODEL_PROMPT, GPTMemory
-from src.replyFilters import cleanReply, stripQuotations, stripSelfTag
+from src.replyFilters import (cleanReply, replaceEmotes, stripQuotations,
+                              stripSelfTag)
 
 client = AsyncOpenAI()
 
@@ -89,7 +90,7 @@ async def respondWithChatGPT(memory: GPTMemory, message: interactions.Message, i
                 )
 
         if response.choices[0].message.content and not NO_POST_RESPONSE_FLAG:
-            filters = [cleanReply, stripSelfTag, stripQuotations]
+            filters = [cleanReply, replaceEmotes, stripSelfTag, stripQuotations]
             reply = response.choices[0].message.content
             for filter in filters:
                 reply = filter(reply)

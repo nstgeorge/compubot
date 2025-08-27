@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
 Script to deploy database changes to production.
-Usage: python scripts/deploy_db.py
+Usage: python scripts/deploy_db.py [--verbose]
 """
 
+import argparse
 import os
 import subprocess
 import sys
@@ -55,8 +56,13 @@ def run_command(cmd: list[str], show_output: bool = False, env: dict = None) -> 
         return False
 
 def main():
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Deploy database changes to production')
+    parser.add_argument('--verbose', action='store_true', help='Show output from Supabase commands')
+    args = parser.parse_args()
+
     # Ensure we have Supabase CLI
-    if not run_command(["supabase", "--version"]):
+    if not run_command(["supabase", "--version"], show_output=args.verbose):
         print("Error: Supabase CLI not found. Install it with:")
         print("  brew install supabase/tap/supabase")
         return 1
@@ -70,13 +76,19 @@ def main():
     
     # Link to production project
     print("Linking to production project...")
-    if not run_command(["supabase", "link", "--project-ref", env_vars['ref'], "-p", env_vars['password']]):
+    if not run_command(["supabase", "link", "--project-ref", env_vars['ref'], "-p", env_vars['password']], show_output=args.verbose):
         print("Error: Failed to link to production project")
         return 1
 
+    # List pending migrations
+    print("\nPending migrations:")
+    if not run_command(["supabase", "db", "list"], show_output=True):
+        print("Error: Failed to list pending migrations")
+        return 1
+
     # Push database changes
-    print("Pushing database changes...")
-    if not run_command(["supabase", "db", "push", "-p", env_vars['password']]):
+    print("\nPushing database changes...")
+    if not run_command(["supabase", "db", "push", "--yes", "-p", env_vars['password']], show_output=args.verbose):
         print("Error: Failed to push database changes")
         return 1
 
@@ -86,7 +98,7 @@ def main():
     print("Switching back to test database...")
     test_vars = get_env_vars("test")
     if test_vars:
-        if not run_command(["supabase", "link", "--project-ref", test_vars['ref'], "-p", test_vars['password']]):
+        if not run_command(["supabase", "link", "--project-ref", test_vars['ref'], "-p", test_vars['password']], show_output=args.verbose):
             print("Warning: Failed to switch back to test database")
     
     return 0

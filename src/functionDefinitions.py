@@ -1,8 +1,11 @@
+import interactions
 from interactions import ChannelType, Member, Message
 
 from src.commands.debug import add_prompt_handle, print_debug_handle
 from src.commands.imageGeneration import generate_image_handle
 from src.commands.mc import get_status_handle
+from src.gptMemory import GPTMemory
+from src.utils.emotes import emotes
 
 
 # Get information about the discord server/channel
@@ -18,7 +21,36 @@ async def channel_info_handle(memory, message: Message):
 def prompt_info_handle(memory, message):
     return 'No one has access to your prompts.'
 
+def get_emote_function():
+    available_emotes = emotes.get_all_emotes()
+    emote_descriptions = [f"{name}: {data['description']}" for name, data in available_emotes.items()]
+    
+    return {
+        "type": "function",
+        "function": {
+            "name": "use_emote",
+            "description": "Use a Discord emote in the message. Available emotes:\n" + "\n".join(emote_descriptions),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "emote_name": {
+                        "type": "string",
+                        "description": "The name of the emote to use",
+                        "enum": list(available_emotes.keys())
+                    }
+                },
+                "required": ["emote_name"]
+            }
+        }
+    }
 
+def use_emote(memory: GPTMemory, message: interactions.Message, emote_name: str):
+    emote = emotes.get_emote(emote_name)
+    if emote:
+        return f"Using emote: {emote}"  # This gets replaced in the final response
+    return f"Emote '{emote_name}' not found"
+
+# Add to FUNCTIONS and FUNCTION_CALLS
 FUNCTIONS = [
     {
         "type": "function",
@@ -67,11 +99,13 @@ FUNCTIONS = [
                 'required': ['prompt']
             }
         }
-    }
+    },
+    get_emote_function()
 ]
 
 FUNCTION_CALLS = {
     'minecraft_server': get_status_handle,
     'channel_info': channel_info_handle,
-    'generate_image': generate_image_handle
+    'generate_image': generate_image_handle,
+    "use_emote": use_emote
 }
